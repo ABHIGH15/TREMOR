@@ -57,12 +57,22 @@ class WebMCPRuntimeManager {
     } catch (err) {
       console.warn('⚠️ [WebMCP] Official polyfill init notice:', err);
     }
+
+    // Ensure document.modelContext has getTools & executeTool helper methods exposed for DevTools/inspection
+    const doc = document as any;
+    if (doc) {
+      if (!doc.modelContext) {
+        doc.modelContext = {};
+      }
+      doc.modelContext.getTools = () => this.getTools();
+      doc.modelContext.executeTool = (name: string, input: any) => this.executeTool(name, input);
+    }
   }
 
   public async registerTool(tool: WebMCPToolDefinition): Promise<void> {
     this.registeredTools.set(tool.name, tool);
 
-    // Register on document.modelContext if available
+    // Register on document.modelContext
     const doc = (typeof document !== 'undefined' ? (document as any) : null);
     if (doc?.modelContext?.registerTool) {
       try {
