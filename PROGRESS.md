@@ -15,7 +15,7 @@
 | **ROUND 3** | WebMCP Core Read Tools | ✅ Complete | 2026-09-01 | Registered `get_blast_radius`, `check_regression_history`, `get_change_provenance` on `document.modelContext` + Interactive Tool Runner + Activity Stream |
 | **ROUND 4** | Centerpiece: `simulate_change_impact` | ✅ Complete | 2026-09-01 | Registered `simulate_change_impact` tool on `document.modelContext`, built floating `SimulationBanner`, dynamic particle graph simulation, full sidebar breakdown, verified across 3 scenarios in real Chrome |
 | **ROUND 5** | Trust Layer: `flag_for_review` | ✅ Complete | 2026-09-01 | Registered `flag_for_review` WebMCP tool (strictly non-self-approving), built interactive Human Review Gate panel with physical Confirm/Dismiss buttons, human activity telemetry, and verified in real Chrome |
-| **ROUND 6** | `get_system_snapshot` & Regression Pass | ⏳ Pending | — | Full 6-tool suite validation |
+| **ROUND 6** | `get_system_snapshot` & Regression Pass | ✅ Complete | 2026-09-01 | Registered `get_system_snapshot` (Tool 6/6), executed continuous E2E regression pass across all 6 tools in real Chrome with visual proof artifacts |
 | **ROUND 7** | Visual & UX Polish Pass | ⏳ Pending | — | High-contrast theme, smooth animations, empty/loading states |
 | **ROUND 8** | Cross-Browser Live Testing | ⏳ Pending | — | ChatGPT in-app browser & Chrome WebMCP flag testing |
 | **ROUND 9** | Documentation & Repo Finalization | ⏳ Pending | — | Full docs, license verification, code snippets |
@@ -94,4 +94,18 @@
   - 1. Agent invocations create pending flags (`flag-pending-gate.png`).
   - 2. Human engineer physical DOM button click transitions status to Confirmed (`flag-confirmed-human.png`).
   - 3. Real-time activity log records human confirmation telemetry (`flag-activity-stream.png`).
+- **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
+
+### ROUND 6 — `get_system_snapshot` & Full Regression Pass (Completed)
+- **WebMCP Tool Registration (`get_system_snapshot` - 6th Tool):**
+  - Schema: `{ layer_filter?: 'all' | 'frontend' | 'backend' | 'shared-lib' | 'infra', include_incidents?: boolean, include_tests?: boolean }`
+  - Returns complete topology (18 nodes, 28 edges, layer subsets), top critical risk bottlenecks (`auth-service 0.88`, `jwt-security-core 0.82`, `checkout-service 0.75`), incident index (5 incidents), and test suite health summary (16 tests, 2 failing, 3 flaky).
+- **Automated Chrome Full-Suite Regression Pass (`test_round6_regression.mjs`):**
+  - 1. `navigator.modelContextTesting.listTools()`: Discovered all 6 tools with 100% schema integrity.
+  - 2. `get_system_snapshot`: Returned complete architecture snapshot.
+  - 3. `get_blast_radius`: Returned downstream transitive caller graph & critical risk calculation for `auth-service`.
+  - 4. `check_regression_history`: Correctly matched incident `i1` on `"session expiry"`.
+  - 5. `get_change_provenance`: Returned 5 commits with 80% AI authorship ratio.
+  - 6. `simulate_change_impact`: Visual simulation rendered on-screen (`regression-simulation-active.png`).
+  - 7. `flag_for_review`: Registered non-self-approving review flag (`regression-flag-pending.png`), and physical human click transitioned it to approved (`regression-flag-confirmed.png`).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
