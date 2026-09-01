@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | Initial skeleton, MIT License, build verified |
 | **ROUND 0.5**| Branding Update to TREMOR | ✅ Complete | 2026-09-01 | Live at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app) & [GitHub Repo](https://github.com/ABHIGH15/TREMOR) |
-| **ROUND 1** | Data Layer (`dataset.json`) | ⏳ Next | — | 15-20 nodes, 25-30 edges, commits, incidents, tests |
+| **ROUND 1** | Data Layer (`dataset.json`) | ✅ Complete | 2026-09-01 | 18 nodes, 28 edges, 20 commits (60% AI), 5 incidents, 16 tests, hero: `auth-service` (0.88 risk) |
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ⏳ Pending | — | Interactive graph, risk coloring, node detail panel |
 | **ROUND 3** | WebMCP Core Read Tools | ⏳ Pending | — | `get_blast_radius`, `check_regression_history`, `get_change_provenance` |
 | **ROUND 4** | Centerpiece: `simulate_change_impact` | ⏳ Pending | — | Visual live graph highlights on proposed change |
@@ -35,3 +35,9 @@
 - Updated `index.html`, `src/App.tsx`, `LICENSE`, `README.md`, and `PROGRESS.md` with TREMOR branding.
 - Renamed GitHub repository to `https://github.com/ABHIGH15/TREMOR` via `gh repo rename`.
 - Deployed to Vercel production at `https://tremor-cockpit.vercel.app`.
+
+### ROUND 1 — Data Layer (Completed)
+- **Created:** `src/types/dataset.ts` with strict TypeScript interfaces (`SystemDataset`, `SystemNode`, `SystemEdge`, `Commit`, `Incident`, `SystemTest`).
+- **Created:** `src/data/dataset.json` with 18 nodes across 4 layers, 28 edges, 20 commits (60% AI / 40% Human), 5 historical incidents, and 16 test suites.
+- **Hero Risky Node:** Designed `auth-service` (0.88 risk score, 5 commits with 4 AI authors, 2 critical past incidents, 2 flaky/failing tests, core hub in dependency tree).
+- **Verified:** Clean build, typed schema validation, console logging on app mount.

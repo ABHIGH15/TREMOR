@@ -1,0 +1,516 @@
+{
+  "nodes": [
+    {
+      "id": "web-app",
+      "label": "Web Dashboard",
+      "layer": "frontend",
+      "risk_score": 0.25,
+      "description": "Next.js customer-facing storefront and web checkout portal",
+      "owner": "Frontend Core Team"
+    },
+    {
+      "id": "mobile-checkout",
+      "label": "Mobile Checkout App",
+      "layer": "frontend",
+      "risk_score": 0.40,
+      "description": "React Native iOS/Android checkout flow with biometric auth",
+      "owner": "Mobile Platform Team"
+    },
+    {
+      "id": "admin-portal",
+      "label": "Internal Admin Portal",
+      "layer": "frontend",
+      "risk_score": 0.15,
+      "description": "Internal operations and customer support console",
+      "owner": "Ops Tooling Team"
+    },
+    {
+      "id": "partner-portal",
+      "label": "Partner API Portal",
+      "layer": "frontend",
+      "risk_score": 0.30,
+      "description": "B2B integration portal for third-party marketplace vendors",
+      "owner": "Partner Ecosystem Team"
+    },
+    {
+      "id": "api-gateway",
+      "label": "API Gateway",
+      "layer": "backend",
+      "risk_score": 0.55,
+      "description": "Edge routing layer, SSL termination, and rate-limiting enforcement",
+      "owner": "Platform Infra"
+    },
+    {
+      "id": "auth-service",
+      "label": "Auth & Session Service",
+      "layer": "backend",
+      "risk_score": 0.88,
+      "description": "Core identity provider, OAuth 2.1 token issuance, and session state manager",
+      "owner": "Security & Identity Team"
+    },
+    {
+      "id": "checkout-service",
+      "label": "Checkout & Billing Service",
+      "layer": "backend",
+      "risk_score": 0.75,
+      "description": "High-velocity cart checkout, discount validation, and payment orchestration",
+      "owner": "Monetization Team"
+    },
+    {
+      "id": "order-processor",
+      "label": "Order Processing Engine",
+      "layer": "backend",
+      "risk_score": 0.60,
+      "description": "Asynchronous order state machine, fulfillment queue, and invoice generator",
+      "owner": "Commerce Ops"
+    },
+    {
+      "id": "inventory-service",
+      "label": "Inventory Management",
+      "layer": "backend",
+      "risk_score": 0.35,
+      "description": "Real-time stock ledger, warehouse reservation, and backorder tracking",
+      "owner": "Supply Chain Team"
+    },
+    {
+      "id": "notification-hub",
+      "label": "Notification Hub",
+      "layer": "backend",
+      "risk_score": 0.20,
+      "description": "Multi-channel transactional email, push notification, and SMS dispatcher",
+      "owner": "Customer Engagement"
+    },
+    {
+      "id": "analytics-pipeline",
+      "label": "Telemetry & Analytics",
+      "layer": "backend",
+      "risk_score": 0.25,
+      "description": "Real-time clickstream ingestion, revenue attribution, and anomaly detector",
+      "owner": "Data Platform"
+    },
+    {
+      "id": "jwt-security-core",
+      "label": "JWT & Security Core",
+      "layer": "shared-lib",
+      "risk_score": 0.82,
+      "description": "Cryptographic utilities, RSA/HMAC signature verification, and JWKS cache",
+      "owner": "Security Guild"
+    },
+    {
+      "id": "payment-sdk",
+      "label": "Payment Gateway SDK",
+      "layer": "shared-lib",
+      "risk_score": 0.70,
+      "description": "Unified Stripe/Adyen connector, tokenization vault, and idempotency wrapper",
+      "owner": "Monetization Team"
+    },
+    {
+      "id": "telemetry-logger",
+      "label": "Distributed Tracing Lib",
+      "layer": "shared-lib",
+      "risk_score": 0.15,
+      "description": "OpenTelemetry context propagator, structured JSON logging, and span sampler",
+      "owner": "Observability Guild"
+    },
+    {
+      "id": "db-client-pool",
+      "label": "Postgres Connection Pool",
+      "layer": "shared-lib",
+      "risk_score": 0.65,
+      "description": "Shared database pooling, read-replica routing, and transaction isolation manager",
+      "owner": "Database Infra"
+    },
+    {
+      "id": "redis-session-cluster",
+      "label": "Redis Session Cluster",
+      "layer": "infra",
+      "risk_score": 0.72,
+      "description": "In-memory distributed token cache and rate-limit counter ring",
+      "owner": "SRE Team"
+    },
+    {
+      "id": "postgres-primary",
+      "label": "PostgreSQL Primary DB",
+      "layer": "infra",
+      "risk_score": 0.50,
+      "description": "Primary transactional datastore with multi-AZ read replicas",
+      "owner": "Database Infra"
+    },
+    {
+      "id": "kafka-event-bus",
+      "label": "Kafka Event Broker",
+      "layer": "infra",
+      "risk_score": 0.45,
+      "description": "Distributed log broker handling 50k events/sec across order and telemetry topics",
+      "owner": "Data Platform"
+    }
+  ],
+  "edges": [
+    { "source": "web-app", "target": "api-gateway", "type": "calls" },
+    { "source": "mobile-checkout", "target": "api-gateway", "type": "calls" },
+    { "source": "admin-portal", "target": "api-gateway", "type": "calls" },
+    { "source": "partner-portal", "target": "api-gateway", "type": "calls" },
+    { "source": "api-gateway", "target": "auth-service", "type": "validates_session", "critical": true },
+    { "source": "api-gateway", "target": "checkout-service", "type": "routes_order", "critical": true },
+    { "source": "api-gateway", "target": "inventory-service", "type": "queries_catalog" },
+    { "source": "auth-service", "target": "jwt-security-core", "type": "imports", "critical": true },
+    { "source": "auth-service", "target": "redis-session-cluster", "type": "persists_tokens", "critical": true },
+    { "source": "auth-service", "target": "postgres-primary", "type": "queries_users" },
+    { "source": "checkout-service", "target": "auth-service", "type": "authorizes_charge", "critical": true },
+    { "source": "checkout-service", "target": "payment-sdk", "type": "imports", "critical": true },
+    { "source": "checkout-service", "target": "order-processor", "type": "emits_order" },
+    { "source": "checkout-service", "target": "db-client-pool", "type": "imports" },
+    { "source": "order-processor", "target": "inventory-service", "type": "reserves_stock" },
+    { "source": "order-processor", "target": "kafka-event-bus", "type": "publishes_events" },
+    { "source": "order-processor", "target": "notification-hub", "type": "triggers_alerts" },
+    { "source": "order-processor", "target": "db-client-pool", "type": "imports" },
+    { "source": "inventory-service", "target": "db-client-pool", "type": "imports" },
+    { "source": "inventory-service", "target": "kafka-event-bus", "type": "publishes_stock_delta" },
+    { "source": "notification-hub", "target": "kafka-event-bus", "type": "subscribes" },
+    { "source": "analytics-pipeline", "target": "kafka-event-bus", "type": "consumes_stream" },
+    { "source": "analytics-pipeline", "target": "postgres-primary", "type": "writes_aggregates" },
+    { "source": "db-client-pool", "target": "postgres-primary", "type": "manages_pool", "critical": true },
+    { "source": "payment-sdk", "target": "telemetry-logger", "type": "imports" },
+    { "source": "auth-service", "target": "telemetry-logger", "type": "imports" },
+    { "source": "checkout-service", "target": "telemetry-logger", "type": "imports" },
+    { "source": "jwt-security-core", "target": "redis-session-cluster", "type": "validates_cache" }
+  ],
+  "commits": [
+    {
+      "id": "c1",
+      "module": "auth-service",
+      "author_type": "ai",
+      "agent_name": "Claude Code",
+      "date": "2026-08-28",
+      "message": "Refactor JWT claims validation and token refresh logic",
+      "risk_impact": "high"
+    },
+    {
+      "id": "c2",
+      "module": "auth-service",
+      "author_type": "ai",
+      "agent_name": "Cursor",
+      "date": "2026-08-25",
+      "message": "Optimize Redis token revocation blacklist query",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c3",
+      "module": "jwt-security-core",
+      "author_type": "ai",
+      "agent_name": "Claude Code",
+      "date": "2026-08-24",
+      "message": "Bump HMAC algorithm signature padding to constant time",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c4",
+      "module": "checkout-service",
+      "author_type": "human",
+      "author_name": "Sarah Chen (Staff Eng)",
+      "date": "2026-08-22",
+      "message": "Add idempotency keys to Stripe webhook callbacks",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c5",
+      "module": "auth-service",
+      "author_type": "ai",
+      "agent_name": "Codex",
+      "date": "2026-08-20",
+      "message": "Implement sliding session expiry in Redis cache",
+      "risk_impact": "high"
+    },
+    {
+      "id": "c6",
+      "module": "db-client-pool",
+      "author_type": "ai",
+      "agent_name": "Cursor",
+      "date": "2026-08-18",
+      "message": "Tune connection pool timeout thresholds for peak traffic",
+      "risk_impact": "high"
+    },
+    {
+      "id": "c7",
+      "module": "order-processor",
+      "author_type": "human",
+      "author_name": "Alex Rivera (Lead)",
+      "date": "2026-08-15",
+      "message": "Add dead-letter queue handling for unfulfilled orders",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c8",
+      "module": "api-gateway",
+      "author_type": "ai",
+      "agent_name": "Claude Code",
+      "date": "2026-08-14",
+      "message": "Add rate-limiting middleware with leaky bucket algorithm",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c9",
+      "module": "mobile-checkout",
+      "author_type": "human",
+      "author_name": "Elena Rostov",
+      "date": "2026-08-12",
+      "message": "Update Apple Pay sheet presentation logic",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c10",
+      "module": "checkout-service",
+      "author_type": "ai",
+      "agent_name": "Cursor",
+      "date": "2026-08-10",
+      "message": "Refactor payment authorization retry loop with exponential backoff",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c11",
+      "module": "auth-service",
+      "author_type": "human",
+      "author_name": "Devin Patel (Sec Lead)",
+      "date": "2026-08-05",
+      "message": "Emergency hotfix: enforce strict audience validation on JWT payload",
+      "risk_impact": "high"
+    },
+    {
+      "id": "c12",
+      "module": "redis-session-cluster",
+      "author_type": "human",
+      "author_name": "Marcus Vance (DevOps)",
+      "date": "2026-08-02",
+      "message": "Upgrade Redis cluster nodes to v7.4 with TLS termination",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c13",
+      "module": "inventory-service",
+      "author_type": "ai",
+      "agent_name": "Codex",
+      "date": "2026-07-30",
+      "message": "Implement optimistic locking on warehouse SKU decrement",
+      "risk_impact": "medium"
+    },
+    {
+      "id": "c14",
+      "module": "payment-sdk",
+      "author_type": "ai",
+      "agent_name": "Claude Code",
+      "date": "2026-07-28",
+      "message": "Add zero-downtime card tokenization fallback provider",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c15",
+      "module": "notification-hub",
+      "author_type": "human",
+      "author_name": "Chloe Bennett",
+      "date": "2026-07-25",
+      "message": "Migrate transactional SMS delivery to Twilio multi-region",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c16",
+      "module": "web-app",
+      "author_type": "human",
+      "author_name": "Liam Thorne",
+      "date": "2026-07-22",
+      "message": "Migrate session cookie handling to Partitioned attribute (CHIPS)",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c17",
+      "module": "auth-service",
+      "author_type": "ai",
+      "agent_name": "Cursor",
+      "date": "2026-07-19",
+      "message": "Automate token rotation on privilege role change",
+      "risk_impact": "high"
+    },
+    {
+      "id": "c18",
+      "module": "postgres-primary",
+      "author_type": "human",
+      "author_name": "Marcus Vance (DevOps)",
+      "date": "2026-07-15",
+      "message": "Reindex user_sessions table and tune query planner cost",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c19",
+      "module": "analytics-pipeline",
+      "author_type": "ai",
+      "agent_name": "Codex",
+      "date": "2026-07-10",
+      "message": "Vectorize aggregate hourly revenue pipeline in ClickHouse",
+      "risk_impact": "low"
+    },
+    {
+      "id": "c20",
+      "module": "partner-portal",
+      "author_type": "human",
+      "author_name": "Elena Rostov",
+      "date": "2026-07-05",
+      "message": "Add OAuth 2.1 PKCE verification for third-party client apps",
+      "risk_impact": "low"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "i1",
+      "module": "auth-service",
+      "description": "Sliding session expiry change (c5) caused cache stampede on Redis cluster during auth peak, dropping checkout sessions",
+      "date": "2026-08-20",
+      "related_commit_id": "c5",
+      "severity": "P1 - Critical"
+    },
+    {
+      "id": "i2",
+      "module": "checkout-service",
+      "description": "Checkout 500 spike during flash sale: auth token validation timeout blocked order authorization pipeline",
+      "date": "2026-08-05",
+      "related_commit_id": "c11",
+      "severity": "P0 - Outage"
+    },
+    {
+      "id": "i3",
+      "module": "db-client-pool",
+      "description": "Connection starvation: AI agent adjusted pool max_connections without checking downstream RDS instance limit (c6)",
+      "date": "2026-08-18",
+      "related_commit_id": "c6",
+      "severity": "P2 - Degraded"
+    },
+    {
+      "id": "i4",
+      "module": "jwt-security-core",
+      "description": "JWT parsing clock-skew bug rejected valid mobile tokens for 18 minutes after DST adjustment",
+      "date": "2026-08-24",
+      "related_commit_id": "c3",
+      "severity": "P2 - Degraded"
+    },
+    {
+      "id": "i5",
+      "module": "inventory-service",
+      "description": "Optimistic lock contention caused inventory check false-negatives on high-velocity items",
+      "date": "2026-07-30",
+      "related_commit_id": "c13",
+      "severity": "P3 - Minor"
+    }
+  ],
+  "tests": [
+    {
+      "module": "auth-service",
+      "test_name": "jwt_session_validation.spec.ts",
+      "status": "flaky",
+      "flakiness_score": 0.78,
+      "coverage": "84%"
+    },
+    {
+      "module": "auth-service",
+      "test_name": "redis_token_revocation.spec.ts",
+      "status": "failing",
+      "flakiness_score": 0.92,
+      "coverage": "62%"
+    },
+    {
+      "module": "auth-service",
+      "test_name": "rate_limit_auth_endpoints.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.05,
+      "coverage": "95%"
+    },
+    {
+      "module": "auth-service",
+      "test_name": "oauth_pkce_handshake.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.02,
+      "coverage": "98%"
+    },
+    {
+      "module": "checkout-service",
+      "test_name": "payment_auth_pipeline.spec.ts",
+      "status": "flaky",
+      "flakiness_score": 0.65,
+      "coverage": "77%"
+    },
+    {
+      "module": "checkout-service",
+      "test_name": "idempotent_order_submission.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.04,
+      "coverage": "91%"
+    },
+    {
+      "module": "jwt-security-core",
+      "test_name": "hmac_constant_time.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.01,
+      "coverage": "100%"
+    },
+    {
+      "module": "jwt-security-core",
+      "test_name": "token_signature_verification.spec.ts",
+      "status": "flaky",
+      "flakiness_score": 0.42,
+      "coverage": "88%"
+    },
+    {
+      "module": "db-client-pool",
+      "test_name": "connection_lease_exhaustion.spec.ts",
+      "status": "failing",
+      "flakiness_score": 0.85,
+      "coverage": "70%"
+    },
+    {
+      "module": "order-processor",
+      "test_name": "order_fulfillment_event_stream.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.08,
+      "coverage": "93%"
+    },
+    {
+      "module": "inventory-service",
+      "test_name": "concurrent_sku_reservation.spec.ts",
+      "status": "flaky",
+      "flakiness_score": 0.55,
+      "coverage": "80%"
+    },
+    {
+      "module": "api-gateway",
+      "test_name": "middleware_routing_matrix.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.03,
+      "coverage": "96%"
+    },
+    {
+      "module": "redis-session-cluster",
+      "test_name": "cluster_failover_replication.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.09,
+      "coverage": "89%"
+    },
+    {
+      "module": "payment-sdk",
+      "test_name": "stripe_tokenization_fallback.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.12,
+      "coverage": "94%"
+    },
+    {
+      "module": "mobile-checkout",
+      "test_name": "apple_pay_e2e_checkout.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.15,
+      "coverage": "85%"
+    },
+    {
+      "module": "web-app",
+      "test_name": "session_cookie_chiped_e2e.spec.ts",
+      "status": "passing",
+      "flakiness_score": 0.06,
+      "coverage": "88%"
+    }
+  ]
+}
