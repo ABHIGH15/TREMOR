@@ -80,6 +80,8 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({
         risk_notes: notes || customNotes || 'Proposed modification flagged for human security and architectural review',
         proposed_action: desc || customDesc || 'Apply proposed code refactor and schema migration',
       };
+    } else if (toolName === 'get_system_snapshot') {
+      payload = { layer_filter: param || 'all', include_incidents: true, include_tests: true };
     } else if (toolName === 'get_blast_radius') {
       payload = { module: param };
     } else if (toolName === 'check_regression_history') {
@@ -307,6 +309,20 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({
 
                     <button
                       onClick={() => {
+                        setSelectedToolName('get_system_snapshot');
+                        setInputParam('all');
+                        handleExecuteTool('get_system_snapshot', 'all');
+                      }}
+                      className="p-2 rounded-lg bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/40 text-left text-[11px] text-indigo-200 flex items-center justify-between transition-all group"
+                    >
+                      <span className="flex items-center gap-1 truncate font-semibold">
+                        <Terminal className="w-3 h-3 text-indigo-400 shrink-0" /> snapshot(all)
+                      </span>
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
+                    </button>
+
+                    <button
+                      onClick={() => {
                         setSelectedToolName('check_regression_history');
                         setInputParam('session expiry');
                         handleExecuteTool('check_regression_history', 'session expiry');
@@ -329,8 +345,9 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({
                       onChange={e => setSelectedToolName(e.target.value)}
                       className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
                     >
-                      <option value="flag_for_review">flag_for_review(module, notes)</option>
+                      <option value="get_system_snapshot">get_system_snapshot(layer_filter)</option>
                       <option value="simulate_change_impact">simulate_change_impact(desc, modules)</option>
+                      <option value="flag_for_review">flag_for_review(module, notes)</option>
                       <option value="get_blast_radius">get_blast_radius(module)</option>
                       <option value="check_regression_history">check_regression_history(pattern)</option>
                       <option value="get_change_provenance">get_change_provenance(module)</option>

@@ -1,4 +1,4 @@
-import { SystemDataset, SystemNode, SimulationResult, PendingReviewFlag } from '../types/dataset';
+import { SystemDataset, SystemNode, SimulationResult, PendingReviewFlag, LayerType } from '../types/dataset';
 import { webMCPRegistry, WebMCPToolDefinition } from './runtime';
 
 export interface ToolCallbacks {
@@ -32,7 +32,7 @@ function computeDownstreamTransitive(rootId: string, dataset: SystemDataset): st
 }
 
 /**
- * Register Round 3, 4, and 5 WebMCP Tools
+ * Register Full Suite of 6 WebMCP Tools (Rounds 3, 4, 5, 6)
  */
 export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolCallbacks = {}) {
   const nodeMap = new Map(dataset.nodes.map(n => [n.id, n]));
@@ -67,19 +67,14 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         };
       }
 
-      // Compute transitive downstream reach
       const downstreamIds = computeDownstreamTransitive(module, dataset);
       const allImpactedIds = [module, ...downstreamIds];
       const impactedNodes = allImpactedIds.map(id => nodeMap.get(id)!).filter(Boolean);
 
-      // Collect tests for target and all downstream modules
       const affectedTests = dataset.tests.filter(t => allImpactedIds.includes(t.module));
       const failingOrFlakyTests = affectedTests.filter(t => t.status !== 'passing');
-
-      // Collect historical incidents
       const relatedIncidents = dataset.incidents.filter(i => allImpactedIds.includes(i.module));
 
-      // Calculate composite blast risk
       const directCallers = dataset.edges
         .filter(e => {
           const tgt = typeof e.target === 'object' ? (e.target as any).id : e.target;
@@ -143,7 +138,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         })),
       };
 
-      // Trigger UI Highlights
       if (callbacks.onHighlightImpactZone) {
         callbacks.onHighlightImpactZone(allImpactedIds, targetNode);
       }
@@ -446,7 +440,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         status: 'PENDING',
       };
 
-      // Add to reactive runtime store
       webMCPRegistry.addPendingFlag(flag);
 
       if (callbacks.onFlagCreated) {
@@ -475,10 +468,110 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
     },
   };
 
-  // Register in WebMCP registry
+  // Tool 6: get_system_snapshot (System Orientation Tool)
+  const getSystemSnapshotTool: WebMCPToolDefinition = {
+    name: 'get_system_snapshot',
+    description: 'Returns the full system architecture topology snapshot in a single call: all system nodes, cross-service dependency edges, high-risk bottlenecks, active test health summary, and historical incident index. Allows agents to get complete system orientation without making multiple separate calls.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        layer_filter: {
+          type: 'string',
+          description: 'Optional layer filter: "all", "frontend", "backend", "shared-lib", "infra"',
+          enum: ['all', 'frontend', 'backend', 'shared-lib', 'infra'],
+        },
+        include_incidents: {
+          type: 'boolean',
+          description: 'Whether to include full historical incident index (default: true)',
+        },
+        include_tests: {
+          type: 'boolean',
+          description: 'Whether to include test suite health summary (default: true)',
+        },
+      },
+    },
+    execute: async (input: { layer_filter?: LayerType | 'all'; include_incidents?: boolean; include_tests?: boolean } = {}) => {
+      const layer = input?.layer_filter || 'all';
+      const inc = input?.include_incidents !== false;
+      const tst = input?.include_tests !== false;
+
+      let filteredNodes = dataset.nodes;
+      if (layer !== 'all') {
+        filteredNodes = dataset.nodes.filter(n => n.layer === layer);
+      }
+      const nodeIds = new Set(filteredNodes.map(n => n.id));
+      const filteredEdges = dataset.edges.filter(
+        e => {
+          const src = typeof e.source === 'object' ? (e.source as any).id : e.source;
+          const tgt = typeof e.target === 'object' ? (e.target as any).id : e.target;
+          return nodeIds.has(src) && nodeIds.has(tgt);
+        }
+      );
+
+      const highRiskNodes = filteredNodes
+        .filter(n => n.risk_score >= 0.70)
+        .sort((a, b) => b.risk_score - a.risk_score);
+
+      const failingTests = dataset.tests.filter(t => t.status === 'failing');
+      const flakyTests = dataset.tests.filter(t => t.status === 'flaky');
+
+      const result = {
+        system_name: 'TREMOR Production Ecosystem',
+        topology_summary: {
+          total_nodes: filteredNodes.length,
+          total_edges: filteredEdges.length,
+          active_layer_filter: layer,
+          high_risk_node_count: highRiskNodes.length,
+          system_wide_mean_risk: Number((filteredNodes.reduce((acc, n) => acc + n.risk_score, 0) / (filteredNodes.length || 1)).toFixed(2)),
+        },
+        top_critical_risk_nodes: highRiskNodes.map(n => ({
+          id: n.id,
+          label: n.label,
+          layer: n.layer,
+          risk_score: n.risk_score,
+          owner: n.owner,
+        })),
+        nodes: filteredNodes.map(n => ({
+          id: n.id,
+          label: n.label,
+          layer: n.layer,
+          risk_score: n.risk_score,
+          owner: n.owner,
+        })),
+        edges: filteredEdges.map(e => ({
+          source: typeof e.source === 'object' ? (e.source as any).id : e.source,
+          target: typeof e.target === 'object' ? (e.target as any).id : e.target,
+          type: e.type,
+        })),
+        ...(inc && {
+          incidents_summary: {
+            total_incidents: dataset.incidents.length,
+            critical_outages_count: dataset.incidents.filter(i => i.severity.startsWith('P0') || i.severity.startsWith('P1')).length,
+            incidents: dataset.incidents,
+          },
+        }),
+        ...(tst && {
+          tests_health_summary: {
+            total_tests: dataset.tests.length,
+            failing_count: failingTests.length,
+            flaky_count: flakyTests.length,
+            passing_count: dataset.tests.length - failingTests.length - flakyTests.length,
+            vulnerable_test_suites: [...failingTests, ...flakyTests],
+          },
+        }),
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  };
+
+  // Register in WebMCP registry (All 6 tools)
   await webMCPRegistry.registerTool(getBlastRadiusTool);
   await webMCPRegistry.registerTool(checkRegressionHistoryTool);
   await webMCPRegistry.registerTool(getChangeProvenanceTool);
   await webMCPRegistry.registerTool(simulateChangeImpactTool);
   await webMCPRegistry.registerTool(flagForReviewTool);
+  await webMCPRegistry.registerTool(getSystemSnapshotTool);
 }
