@@ -64,3 +64,16 @@ export interface SimulationResult {
   historical_incident_count: number;
   key_findings: string[];
 }
+
+export interface PendingReviewFlag {
+  id: string;
+  module: string;
+  module_label?: string;
+  risk_notes: string;
+  proposed_action?: string;
+  risk_score: number;
+  timestamp: string;
+  status: 'PENDING' | 'CONFIRMED' | 'DISMISSED';
+  resolved_at?: string;
+  resolved_by?: string;
+}

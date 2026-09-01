@@ -1,6 +1,7 @@
-import React from 'react';
-import { ShieldAlert, Sparkles, RefreshCw, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Sparkles, RefreshCw, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { SystemDataset, LayerType } from '../types/dataset';
+import { webMCPRegistry } from '../webmcp/runtime';
 
 interface NavbarProps {
   dataset: SystemDataset;
@@ -17,6 +18,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onResetView,
   onSelectHeroNode,
 }) => {
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const unsub = webMCPRegistry.onFlagsChanged(flags => {
+      setPendingCount(flags.filter(f => f.status === 'PENDING').length);
+    });
+    return unsub;
+  }, []);
+
   const highRiskCount = dataset.nodes.filter(n => n.risk_score >= 0.7).length;
   const incidentCount = dataset.incidents.length;
 
@@ -69,13 +79,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right Controls & Quick Actions */}
       <div className="flex items-center gap-2.5">
+        {/* Pending Review Badge if Active */}
+        {pendingCount > 0 && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold animate-pulse shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-amber-400" />
+            <span>{pendingCount} Pending Approval</span>
+          </div>
+        )}
+
         {/* Hero Node Quick Trigger */}
         <button
           onClick={onSelectHeroNode}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-medium transition-all shadow-sm"
           title="Inspect Hero Risky Node (auth-service)"
         >
-          <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
           <span className="hidden sm:inline">Hero Node:</span>
           <span className="font-mono font-bold">auth-service</span>
         </button>

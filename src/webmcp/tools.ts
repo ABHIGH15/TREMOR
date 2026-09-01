@@ -1,10 +1,11 @@
-import { SystemDataset, SystemNode, SimulationResult } from '../types/dataset';
+import { SystemDataset, SystemNode, SimulationResult, PendingReviewFlag } from '../types/dataset';
 import { webMCPRegistry, WebMCPToolDefinition } from './runtime';
 
 export interface ToolCallbacks {
   onHighlightImpactZone?: (impactedNodeIds: string[], targetNode?: SystemNode) => void;
   onSelectNode?: (node: SystemNode) => void;
   onSimulateChangeImpact?: (simulation: SimulationResult) => void;
+  onFlagCreated?: (flag: PendingReviewFlag) => void;
 }
 
 /**
@@ -16,7 +17,6 @@ function computeDownstreamTransitive(rootId: string, dataset: SystemDataset): st
 
   while (queue.length > 0) {
     const current = queue.shift()!;
-    // Find all nodes that call/depend on current (edges where target === current)
     dataset.edges.forEach(edge => {
       const src = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
       const tgt = typeof edge.target === 'object' ? (edge.target as any).id : edge.target;
@@ -32,7 +32,7 @@ function computeDownstreamTransitive(rootId: string, dataset: SystemDataset): st
 }
 
 /**
- * Register Round 3 & Round 4 WebMCP Tools
+ * Register Round 3, 4, and 5 WebMCP Tools
  */
 export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolCallbacks = {}) {
   const nodeMap = new Map(dataset.nodes.map(n => [n.id, n]));
@@ -79,7 +79,7 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
       // Collect historical incidents
       const relatedIncidents = dataset.incidents.filter(i => allImpactedIds.includes(i.module));
 
-      // Calculate composite blast risk (weighted root + direct downstream callers)
+      // Calculate composite blast risk
       const directCallers = dataset.edges
         .filter(e => {
           const tgt = typeof e.target === 'object' ? (e.target as any).id : e.target;
@@ -181,7 +181,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
           (i.related_commit_id && i.related_commit_id.toLowerCase().includes(lower))
       );
 
-      // Enhance with commit details if available
       const enriched = matchedIncidents.map(inc => {
         const commit = inc.related_commit_id
           ? dataset.commits.find(c => c.id === inc.related_commit_id)
@@ -294,7 +293,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         };
       }
 
-      // Collect all downstream callers across all touched modules
       const downstreamSet = new Set<string>();
       touched_modules.forEach(modId => {
         const ds = computeDownstreamTransitive(modId, dataset);
@@ -309,7 +307,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
       const allAffectedIds = Array.from(new Set([...touched_modules, ...downstreamList]));
       const allAffectedNodes = allAffectedIds.map(id => nodeMap.get(id)!).filter(Boolean);
 
-      // Check matching regression history
       const descLower = description.toLowerCase();
       const relevantIncidents = dataset.incidents.filter(inc => {
         const modMatch = allAffectedIds.includes(inc.module);
@@ -317,12 +314,10 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         return modMatch || descMatch;
       });
 
-      // Collect affected test suites
       const affectedTests = dataset.tests.filter(t => allAffectedIds.includes(t.module));
       const failingTests = affectedTests.filter(t => t.status === 'failing');
       const flakyTests = affectedTests.filter(t => t.status === 'flaky');
 
-      // Calculate Predicted Blast Risk Index
       const touchedNodes = touched_modules.map(id => nodeMap.get(id)!).filter(Boolean);
       const touchedAvgRisk = touchedNodes.reduce((acc, n) => acc + n.risk_score, 0) / (touchedNodes.length || 1);
       const downstreamNodes = downstreamList.map(id => nodeMap.get(id)!).filter(Boolean);
@@ -330,7 +325,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         ? downstreamNodes.reduce((acc, n) => acc + n.risk_score, 0) / downstreamNodes.length
         : 0;
 
-      // Risk score calculation: 50% touched risk, 30% downstream severity, 10% incident penalty, 10% test penalty
       const hasCriticalIncident = relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1'));
       const incidentPenalty = hasCriticalIncident ? 0.15 : relevantIncidents.length > 0 ? 0.05 : 0;
       const testPenalty = failingTests.length > 0 ? 0.1 : flakyTests.length > 0 ? 0.05 : 0;
@@ -345,7 +339,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         safetyRating = 'LOW RISK - SAFE FOR AUTOMATION';
       }
 
-      // Key findings
       const keyFindings: string[] = [
         `Directly alters ${touched_modules.length} module(s): ${touched_modules.join(', ')}`,
         `Propagates downstream to ${downstreamList.length} dependent service(s): ${downstreamList.slice(0, 4).join(', ')}${downstreamList.length > 4 ? ` (+${downstreamList.length - 4} more)` : ''}`,
@@ -371,7 +364,6 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         key_findings: keyFindings,
       };
 
-      // Trigger UI Simulation Highlights
       if (callbacks.onSimulateChangeImpact) {
         callbacks.onSimulateChangeImpact(simulationData);
       } else if (callbacks.onHighlightImpactZone) {
@@ -415,9 +407,78 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
     },
   };
 
+  // Tool 5: flag_for_review (Trust Layer Tool)
+  const flagForReviewTool: WebMCPToolDefinition = {
+    name: 'flag_for_review',
+    description: 'Flags a high-risk module or proposed change for mandatory human engineer review and sign-off before code modifications can be merged or deployed. This tool ONLY creates a pending review flag in the Tremor Cockpit; it CANNOT approve, dismiss, or resolve flags (resolution requires a physical human click).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        module: {
+          type: 'string',
+          description: 'The ID of the module being flagged for human engineer review (e.g. "auth-service", "db-client-pool")',
+        },
+        risk_notes: {
+          type: 'string',
+          description: 'Specific safety justification, downstream hazards, or test failure warnings for the human reviewer',
+        },
+        proposed_action: {
+          type: 'string',
+          description: 'Optional brief description of what the agent intends to do if approved by human engineer',
+        },
+      },
+      required: ['module', 'risk_notes'],
+    },
+    execute: async ({ module, risk_notes, proposed_action }: { module: string; risk_notes: string; proposed_action?: string }) => {
+      const targetNode = nodeMap.get(module);
+      const flagId = `flag_${Math.random().toString(36).substring(2, 8)}`;
+      const now = new Date();
+      const timestamp = now.toTimeString().split(' ')[0];
+
+      const flag: PendingReviewFlag = {
+        id: flagId,
+        module,
+        module_label: targetNode?.label || module,
+        risk_notes,
+        proposed_action: proposed_action || 'Proposed modification pending human sign-off',
+        risk_score: targetNode?.risk_score || 0.65,
+        timestamp,
+        status: 'PENDING',
+      };
+
+      // Add to reactive runtime store
+      webMCPRegistry.addPendingFlag(flag);
+
+      if (callbacks.onFlagCreated) {
+        callbacks.onFlagCreated(flag);
+      }
+      if (targetNode && callbacks.onSelectNode) {
+        callbacks.onSelectNode(targetNode);
+      }
+
+      const responsePayload = {
+        status: 'PENDING_HUMAN_REVIEW',
+        flag_id: flagId,
+        flagged_module: module,
+        module_name: targetNode?.label || module,
+        risk_score: targetNode?.risk_score || 0.65,
+        risk_notes: risk_notes,
+        proposed_action: flag.proposed_action,
+        human_approval_status: 'AWAITING_PHYSICAL_CLICK',
+        can_tool_self_approve: false,
+        message: `Security review flag '${flagId}' created in Tremor Cockpit. A human engineer must explicitly click 'Confirm / Approve Change' or 'Dismiss / Reject Change' in the UI before any irreversible action can proceed.`,
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(responsePayload, null, 2) }],
+      };
+    },
+  };
+
   // Register in WebMCP registry
   await webMCPRegistry.registerTool(getBlastRadiusTool);
   await webMCPRegistry.registerTool(checkRegressionHistoryTool);
   await webMCPRegistry.registerTool(getChangeProvenanceTool);
   await webMCPRegistry.registerTool(simulateChangeImpactTool);
+  await webMCPRegistry.registerTool(flagForReviewTool);
 }

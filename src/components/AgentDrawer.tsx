@@ -12,22 +12,33 @@ import {
   Search,
   GitBranch,
   Sparkles,
-  Zap
+  Zap,
+  ShieldAlert,
+  CheckCircle,
+  XCircle,
+  Clock,
+  UserCheck
 } from 'lucide-react';
 import { webMCPRegistry, WebMCPActivityLogItem, WebMCPToolDefinition } from '../webmcp/runtime';
+import { PendingReviewFlag } from '../types/dataset';
 
 interface AgentDrawerProps {
   onClearHighlights?: () => void;
+  onSelectFlaggedModule?: (moduleId: string) => void;
 }
 
-export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) => {
+export const AgentDrawer: React.FC<AgentDrawerProps> = ({
+  onClearHighlights,
+}) => {
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'tester' | 'activity' | 'pending'>('tester');
   const [tools, setTools] = useState<WebMCPToolDefinition[]>([]);
   const [activityLogs, setActivityLogs] = useState<WebMCPActivityLogItem[]>([]);
-  const [selectedToolName, setSelectedToolName] = useState('simulate_change_impact');
-  const [inputParam, setInputParam] = useState('auth-service,redis-session-cluster');
-  const [customDesc, setCustomDesc] = useState('Refactor JWT sliding session expiry and distributed cache cluster');
+  const [pendingFlags, setPendingFlags] = useState<PendingReviewFlag[]>([]);
+  const [selectedToolName, setSelectedToolName] = useState('flag_for_review');
+  const [inputParam, setInputParam] = useState('auth-service');
+  const [customDesc, setCustomDesc] = useState('Refactor sliding session token TTL to 15m and add Redis cluster replication');
+  const [customNotes, setCustomNotes] = useState('High-risk session change touches core auth and Redis cluster; past incident i1 cache stampede hazard');
   const [isExecuting, setIsExecuting] = useState(false);
   const [lastResponse, setLastResponse] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -37,13 +48,20 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
     const unsubActivity = webMCPRegistry.onActivity(item => {
       setActivityLogs(prev => [item, ...prev].slice(0, 30));
     });
+    const unsubFlags = webMCPRegistry.onFlagsChanged(flags => {
+      setPendingFlags(flags);
+    });
+
     return () => {
       unsubTools();
       unsubActivity();
+      unsubFlags();
     };
   }, []);
 
-  const handleExecuteTool = async (toolName: string, param: string, desc?: string) => {
+  const pendingCount = pendingFlags.filter(f => f.status === 'PENDING').length;
+
+  const handleExecuteTool = async (toolName: string, param: string, desc?: string, notes?: string) => {
     setIsExecuting(true);
     let payload: any = {};
     if (toolName === 'simulate_change_impact') {
@@ -51,6 +69,12 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
       payload = {
         description: desc || customDesc || 'Proposed system modification',
         touched_modules: touched.length > 0 ? touched : ['auth-service'],
+      };
+    } else if (toolName === 'flag_for_review') {
+      payload = {
+        module: param || 'auth-service',
+        risk_notes: notes || customNotes || 'Proposed modification flagged for human security and architectural review',
+        proposed_action: desc || customDesc || 'Apply proposed code refactor and schema migration',
       };
     } else if (toolName === 'get_blast_radius') {
       payload = { module: param };
@@ -66,11 +90,25 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
       const res = await webMCPRegistry.executeTool(toolName, payload);
       const text = res.content?.[0]?.text || JSON.stringify(res, null, 2);
       setLastResponse(text);
+
+      // If it was a flag_for_review, automatically switch to Pending tab to show the gate
+      if (toolName === 'flag_for_review') {
+        setActiveTab('pending');
+        setIsOpen(true);
+      }
     } catch (err: any) {
       setLastResponse(JSON.stringify({ error: err?.message || 'Execution error' }, null, 2));
     } finally {
       setIsExecuting(false);
     }
+  };
+
+  const handleHumanConfirm = (flagId: string) => {
+    webMCPRegistry.confirmFlagByHuman(flagId, 'Devin Patel (Lead SRE)');
+  };
+
+  const handleHumanDismiss = (flagId: string) => {
+    webMCPRegistry.dismissFlagByHuman(flagId, 'Devin Patel (Lead SRE)');
   };
 
   const handleCopy = () => {
@@ -131,13 +169,21 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                 setIsOpen(true);
                 setActiveTab('pending');
               }}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 ${
                 activeTab === 'pending' && isOpen
-                  ? 'bg-indigo-600 text-white font-semibold shadow-sm'
+                  ? 'bg-amber-600 text-white font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Pending Review (0)
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Pending Review</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                pendingCount > 0
+                  ? 'bg-red-500 text-white animate-pulse'
+                  : 'bg-slate-800 text-slate-400'
+              }`}>
+                {pendingCount}
+              </span>
             </button>
           </div>
         </div>
@@ -182,43 +228,61 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                 <div className="space-y-1.5">
                   <div className="text-[10px] text-slate-400 font-sans uppercase font-semibold tracking-wider flex items-center justify-between">
                     <span>1-Click Scenarios</span>
-                    <span className="text-cyan-400">Round 4 Centerpiece</span>
+                    <span className="text-amber-400 font-bold">Round 5 Trust Gate</span>
                   </div>
                   
-                  {/* Round 4 Centerpiece Presets */}
+                  {/* Round 5 Trust Gate Preset */}
                   <button
                     onClick={() => {
-                      setSelectedToolName('simulate_change_impact');
-                      setInputParam('auth-service,redis-session-cluster');
-                      const desc = 'Refactor JWT claims validation and sliding session cache timeout in Redis cluster';
-                      setCustomDesc(desc);
-                      handleExecuteTool('simulate_change_impact', 'auth-service,redis-session-cluster', desc);
+                      setSelectedToolName('flag_for_review');
+                      setInputParam('auth-service');
+                      const notes = 'Sliding session expiry change touches P1 incident path (cache stampede) and 2 failing tests. Mandatory human review required.';
+                      const action = 'Refactor JWT claims validation and sliding session cache timeout in Redis';
+                      setCustomNotes(notes);
+                      setCustomDesc(action);
+                      handleExecuteTool('flag_for_review', 'auth-service', action, notes);
                     }}
-                    className="w-full p-2.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 border border-red-500/40 text-left text-[11px] text-red-200 flex items-center justify-between transition-all group shadow-sm"
+                    className="w-full p-2.5 rounded-lg bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/40 text-left text-[11px] text-amber-200 flex items-center justify-between transition-all group shadow-sm"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
                       <div className="truncate">
-                        <span className="font-bold text-white">⚡ simulate(auth + redis)</span>
-                        <span className="text-[10px] text-red-300 block truncate">High risk token TTL refactor (P1 incident risk)</span>
+                        <span className="font-bold text-white">🚨 flag_for_review(auth-service)</span>
+                        <span className="text-[10px] text-amber-300 block truncate">Create pending human review flag for JWT refactor</span>
                       </div>
                     </div>
-                    <Play className="w-3 h-3 text-red-400 opacity-80 group-hover:opacity-100 shrink-0" />
+                    <Play className="w-3 h-3 text-amber-400 opacity-80 group-hover:opacity-100 shrink-0" />
                   </button>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
                     <button
                       onClick={() => {
                         setSelectedToolName('simulate_change_impact');
-                        setInputParam('db-client-pool');
-                        const desc = 'Increase PostgreSQL connection pool limit from 50 to 200 without replica split';
+                        setInputParam('auth-service,redis-session-cluster');
+                        const desc = 'Refactor JWT claims validation and sliding session cache timeout in Redis cluster';
                         setCustomDesc(desc);
-                        handleExecuteTool('simulate_change_impact', 'db-client-pool', desc);
+                        handleExecuteTool('simulate_change_impact', 'auth-service,redis-session-cluster', desc);
+                      }}
+                      className="p-2 rounded-lg bg-red-950/30 hover:bg-red-900/40 border border-red-500/30 text-left text-[11px] text-red-300 flex items-center justify-between transition-all group"
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <Zap className="w-3 h-3 text-red-400 shrink-0" /> simulate(auth+redis)
+                      </span>
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedToolName('simulate_change_impact');
+                        setInputParam('order-processor');
+                        const desc = 'Refactor order state transition engine to asynchronous webhook dispatch';
+                        setCustomDesc(desc);
+                        handleExecuteTool('simulate_change_impact', 'order-processor', desc);
                       }}
                       className="p-2 rounded-lg bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 text-left text-[11px] text-amber-300 flex items-center justify-between transition-all group"
                     >
                       <span className="flex items-center gap-1 truncate">
-                        <Flame className="w-3 h-3 text-amber-400 shrink-0" /> simulate(db-pool)
+                        <Flame className="w-3 h-3 text-amber-400 shrink-0" /> simulate(orders)
                       </span>
                       <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
                     </button>
@@ -250,20 +314,6 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       </span>
                       <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setSelectedToolName('get_change_provenance');
-                        setInputParam('auth-service');
-                        handleExecuteTool('get_change_provenance', 'auth-service');
-                      }}
-                      className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-[11px] text-slate-300 flex items-center justify-between transition-all group"
-                    >
-                      <span className="flex items-center gap-1 truncate">
-                        <Bot className="w-3 h-3 text-purple-400 shrink-0" /> provenance(auth)
-                      </span>
-                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
-                    </button>
                   </div>
                 </div>
 
@@ -275,6 +325,7 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       onChange={e => setSelectedToolName(e.target.value)}
                       className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
                     >
+                      <option value="flag_for_review">flag_for_review(module, notes)</option>
                       <option value="simulate_change_impact">simulate_change_impact(desc, modules)</option>
                       <option value="get_blast_radius">get_blast_radius(module)</option>
                       <option value="check_regression_history">check_regression_history(pattern)</option>
@@ -285,12 +336,12 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       type="text"
                       value={inputParam}
                       onChange={e => setInputParam(e.target.value)}
-                      placeholder="Module IDs (comma-separated)..."
+                      placeholder="Module ID (e.g. auth-service)..."
                       className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
                     />
 
                     <button
-                      onClick={() => handleExecuteTool(selectedToolName, inputParam, customDesc)}
+                      onClick={() => handleExecuteTool(selectedToolName, inputParam, customDesc, customNotes)}
                       disabled={isExecuting}
                       className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-sans font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
                     >
@@ -298,6 +349,16 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       <span>Run</span>
                     </button>
                   </div>
+
+                  {selectedToolName === 'flag_for_review' && (
+                    <input
+                      type="text"
+                      value={customNotes}
+                      onChange={e => setCustomNotes(e.target.value)}
+                      placeholder="Safety justification / risk notes..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-[10px] text-slate-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
+                    />
+                  )}
 
                   {selectedToolName === 'simulate_change_impact' && (
                     <input
@@ -346,8 +407,8 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
           {activeTab === 'activity' && (
             <div className="col-span-12 space-y-2 font-mono">
               <div className="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-1 text-xs">
-                <span>Timestamp & Tool</span>
-                <span>Payload Preview / Latency</span>
+                <span>Timestamp & Origin</span>
+                <span>Payload / Confirmation Telemetry</span>
               </div>
               {activityLogs.length === 0 ? (
                 <div className="text-slate-500 italic text-center py-6">
@@ -355,34 +416,164 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {activityLogs.map(log => (
-                    <div
-                      key={log.id}
-                      className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-[11px]"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-500">[{log.timestamp}]</span>
-                        <span className="font-bold text-indigo-400">{log.toolName}</span>
-                        <span className="text-slate-400">({JSON.stringify(log.input)})</span>
+                  {activityLogs.map(log => {
+                    const isHuman = log.status === 'human_action';
+                    const isPending = log.status === 'pending_human';
+
+                    return (
+                      <div
+                        key={log.id}
+                        className={`p-2 rounded-lg border flex items-center justify-between text-[11px] ${
+                          isHuman
+                            ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                            : isPending
+                            ? 'bg-amber-950/30 border-amber-500/30 text-amber-200'
+                            : 'bg-slate-900 border-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500">[{log.timestamp}]</span>
+                          {isHuman ? (
+                            <span className="font-bold text-emerald-400 flex items-center gap-1">
+                              <UserCheck className="w-3.5 h-3.5" /> HUMAN_GATE
+                            </span>
+                          ) : (
+                            <span className="font-bold text-indigo-400">{log.toolName}</span>
+                          )}
+                          <span className="text-slate-400">({JSON.stringify(log.input)})</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate max-w-md">{log.outputPreview}</span>
+                          <span className={`font-bold ${isHuman ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            {log.durationMs}ms
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-300 truncate max-w-md">{log.outputPreview}</span>
-                        <span className="text-emerald-400 font-bold">{log.durationMs}ms</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
 
           {activeTab === 'pending' && (
-            <div className="col-span-12 p-6 rounded-xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
-              <ShieldCheck className="w-8 h-8 text-amber-400 mx-auto opacity-70" />
-              <div className="font-semibold text-slate-200">Trust Layer (Round 5 Target)</div>
-              <p className="text-slate-400 max-w-md mx-auto text-xs">
-                When an AI agent calls <code className="text-amber-400">flag_for_review</code>, pending security and blast flags will be queued here for mandatory human Confirm / Dismiss resolution.
-              </p>
+            <div className="col-span-12 space-y-3 font-sans">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div>
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    Human Review Gate (Trust Layer)
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    AI agents can declare intent and flag high-risk operations, but <strong>cannot self-approve</strong>. A human engineer must physically confirm or dismiss each flag.
+                  </p>
+                </div>
+                <div className="text-xs font-mono text-slate-400">
+                  Pending: <strong className="text-amber-400">{pendingCount}</strong>
+                </div>
+              </div>
+
+              {pendingFlags.length === 0 ? (
+                <div className="p-8 rounded-xl bg-slate-900/40 border border-slate-800 text-center space-y-2">
+                  <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto opacity-80" />
+                  <div className="font-semibold text-slate-200 text-sm">All Operational Surfaces Clear</div>
+                  <p className="text-slate-400 text-xs max-w-md mx-auto">
+                    Zero pending review flags. When an AI agent invokes <code className="text-amber-400 font-mono">flag_for_review</code>, the request will block here until you confirm or dismiss.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {pendingFlags.map(flag => {
+                    const isPending = flag.status === 'PENDING';
+                    const isConfirmed = flag.status === 'CONFIRMED';
+
+                    return (
+                      <div
+                        key={flag.id}
+                        className={`p-3.5 rounded-xl border transition-all ${
+                          isPending
+                            ? 'bg-amber-950/25 border-amber-500/40 shadow-sm'
+                            : isConfirmed
+                            ? 'bg-emerald-950/20 border-emerald-500/30 opacity-90'
+                            : 'bg-slate-900/60 border-slate-800 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                                {flag.id}
+                              </span>
+                              <span className="font-bold text-amber-300 text-xs">
+                                {flag.module_label || flag.module} ({flag.module})
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> Flagged at {flag.timestamp}
+                              </span>
+                              <span className={`px-2 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                isPending
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                                  : isConfirmed
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                  : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                              }`}>
+                                {flag.status}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-200 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 leading-relaxed font-sans">
+                              <strong className="text-amber-400 font-medium">Agent Risk Justification:</strong> {flag.risk_notes}
+                            </p>
+
+                            {flag.proposed_action && (
+                              <p className="text-[11px] text-slate-400 italic">
+                                Proposed Action: "{flag.proposed_action}"
+                              </p>
+                            )}
+
+                            {flag.resolved_at && (
+                              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1 pt-1">
+                                {isConfirmed ? (
+                                  <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3" /> Approved by {flag.resolved_by} at {flag.resolved_at}
+                                  </span>
+                                ) : (
+                                  <span className="text-red-400 font-semibold flex items-center gap-1">
+                                    <XCircle className="w-3 h-3" /> Rejected by {flag.resolved_by} at {flag.resolved_at}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Physical Human-Only Action Buttons */}
+                          {isPending && (
+                            <div className="flex items-center gap-2 shrink-0 pt-1">
+                              <button
+                                onClick={() => handleHumanConfirm(flag.id)}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md hover:shadow-emerald-900/50 transition-all cursor-pointer"
+                                title="Explicit Human Engineer Approval"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Confirm / Approve</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleHumanDismiss(flag.id)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-red-950/80 hover:border-red-500/50 border border-slate-700 text-slate-300 hover:text-red-300 font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                title="Reject and Dismiss"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>Dismiss</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

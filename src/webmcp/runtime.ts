@@ -4,6 +4,7 @@
  * providing canonical W3C / Chrome WebMCP standard (document.modelContext / navigator.modelContext)
  */
 import { initializeWebModelContext } from '@mcp-b/global';
+import { PendingReviewFlag } from '../types/dataset';
 
 export interface WebMCPToolInputSchema {
   type: string;
@@ -33,16 +34,19 @@ export interface WebMCPActivityLogItem {
   input: any;
   outputPreview: string;
   durationMs: number;
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'pending_human' | 'human_action';
 }
 
 type ActivityLogListener = (logItem: WebMCPActivityLogItem) => void;
 type ToolRegisteredListener = (tools: WebMCPToolDefinition[]) => void;
+type FlagsChangedListener = (flags: PendingReviewFlag[]) => void;
 
 class WebMCPRuntimeManager {
   private registeredTools: Map<string, WebMCPToolDefinition> = new Map();
   private activityListeners: Set<ActivityLogListener> = new Set();
   private toolListeners: Set<ToolRegisteredListener> = new Set();
+  private pendingFlags: Map<string, PendingReviewFlag> = new Map();
+  private flagListeners: Set<FlagsChangedListener> = new Set();
 
   constructor() {
     this.init();
@@ -161,7 +165,7 @@ class WebMCPRuntimeManager {
         input,
         outputPreview: preview,
         durationMs,
-        status: result.isError ? 'error' : 'success',
+        status: result.isError ? 'error' : name === 'flag_for_review' ? 'pending_human' : 'success',
       });
 
       return result;
@@ -186,6 +190,70 @@ class WebMCPRuntimeManager {
     }
   }
 
+  // --- Trust Layer / Human Review Methods ---
+  public addPendingFlag(flag: PendingReviewFlag): void {
+    this.pendingFlags.set(flag.id, flag);
+    this.notifyFlagListeners();
+  }
+
+  public confirmFlagByHuman(flagId: string, reviewer = 'Human Reviewer (Devin Patel)'): boolean {
+    const flag = this.pendingFlags.get(flagId);
+    if (!flag) return false;
+
+    const now = new Date();
+    const timestamp = now.toTimeString().split(' ')[0];
+
+    flag.status = 'CONFIRMED';
+    flag.resolved_at = timestamp;
+    flag.resolved_by = reviewer;
+    this.pendingFlags.set(flagId, flag);
+    this.notifyFlagListeners();
+
+    // Broadcast Human Action Event to Activity Stream
+    this.notifyActivity({
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp,
+      toolName: 'HUMAN_APPROVAL_GATE',
+      input: { flag_id: flagId, module: flag.module, action: 'CONFIRM' },
+      outputPreview: `✅ Human Engineer (${reviewer}) CONFIRMED & APPROVED change for '${flag.module}'`,
+      durationMs: 0,
+      status: 'human_action',
+    });
+
+    return true;
+  }
+
+  public dismissFlagByHuman(flagId: string, reviewer = 'Human Reviewer (Devin Patel)'): boolean {
+    const flag = this.pendingFlags.get(flagId);
+    if (!flag) return false;
+
+    const now = new Date();
+    const timestamp = now.toTimeString().split(' ')[0];
+
+    flag.status = 'DISMISSED';
+    flag.resolved_at = timestamp;
+    flag.resolved_by = reviewer;
+    this.pendingFlags.set(flagId, flag);
+    this.notifyFlagListeners();
+
+    // Broadcast Human Action Event to Activity Stream
+    this.notifyActivity({
+      id: Math.random().toString(36).substring(2, 9),
+      timestamp,
+      toolName: 'HUMAN_APPROVAL_GATE',
+      input: { flag_id: flagId, module: flag.module, action: 'DISMISS' },
+      outputPreview: `❌ Human Engineer (${reviewer}) REJECTED & DISMISSED change for '${flag.module}'`,
+      durationMs: 0,
+      status: 'human_action',
+    });
+
+    return true;
+  }
+
+  public getPendingFlags(): PendingReviewFlag[] {
+    return Array.from(this.pendingFlags.values());
+  }
+
   public onActivity(listener: ActivityLogListener): () => void {
     this.activityListeners.add(listener);
     return () => this.activityListeners.delete(listener);
@@ -197,6 +265,12 @@ class WebMCPRuntimeManager {
     return () => this.toolListeners.delete(listener);
   }
 
+  public onFlagsChanged(listener: FlagsChangedListener): () => void {
+    this.flagListeners.add(listener);
+    listener(this.getPendingFlags());
+    return () => this.flagListeners.delete(listener);
+  }
+
   private notifyActivity(item: WebMCPActivityLogItem) {
     this.activityListeners.forEach(fn => fn(item));
   }
@@ -204,6 +278,11 @@ class WebMCPRuntimeManager {
   private notifyToolListeners() {
     const list = this.getTools();
     this.toolListeners.forEach(fn => fn(list));
+  }
+
+  private notifyFlagListeners() {
+    const list = this.getPendingFlags();
+    this.flagListeners.forEach(fn => fn(list));
   }
 }
 
