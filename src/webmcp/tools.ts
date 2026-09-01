@@ -78,10 +78,31 @@ export async function registerCoreReadTools(dataset: SystemDataset, callbacks: T
       // Collect historical incidents
       const relatedIncidents = dataset.incidents.filter(i => allImpactedIds.includes(i.module));
 
-      // Calculate composite blast risk
-      const avgDownstreamRisk =
-        impactedNodes.reduce((acc, n) => acc + n.risk_score, 0) / (impactedNodes.length || 1);
+      // Calculate composite blast risk (weighted root + direct downstream callers)
+      const directCallers = dataset.edges
+        .filter(e => {
+          const tgt = typeof e.target === 'object' ? (e.target as any).id : e.target;
+          return tgt === module;
+        })
+        .map(e => {
+          const src = typeof e.source === 'object' ? (e.source as any).id : e.source;
+          return nodeMap.get(src);
+        })
+        .filter(Boolean) as SystemNode[];
+
+      const directRiskSum = directCallers.reduce((acc, n) => acc + n.risk_score, 0);
+      const avgDirectRisk = directCallers.length > 0 ? directRiskSum / directCallers.length : targetNode.risk_score;
+      const compositeBlastRisk = Number(((targetNode.risk_score * 0.6) + (avgDirectRisk * 0.4)).toFixed(2));
       const hasCriticalOutage = relatedIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1'));
+
+      let outageRiskLabel: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' = 'LOW';
+      if (compositeBlastRisk >= 0.70 || hasCriticalOutage) {
+        outageRiskLabel = 'CRITICAL';
+      } else if (compositeBlastRisk >= 0.50) {
+        outageRiskLabel = 'HIGH';
+      } else if (compositeBlastRisk >= 0.30) {
+        outageRiskLabel = 'MODERATE';
+      }
 
       const result = {
         target_module: {
@@ -98,8 +119,8 @@ export async function registerCoreReadTools(dataset: SystemDataset, callbacks: T
             const n = nodeMap.get(id);
             return { id, label: n?.label, layer: n?.layer, risk_score: n?.risk_score };
           }),
-          composite_blast_risk: Number(avgDownstreamRisk.toFixed(2)),
-          critical_outage_risk: hasCriticalOutage ? 'CRITICAL' : 'MODERATE',
+          composite_blast_risk: compositeBlastRisk,
+          critical_outage_risk: outageRiskLabel,
         },
         affected_tests_summary: {
           total_tests: affectedTests.length,
