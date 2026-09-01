@@ -16,7 +16,7 @@
 | **ROUND 4** | Centerpiece: `simulate_change_impact` | ✅ Complete | 2026-09-01 | Registered `simulate_change_impact` tool on `document.modelContext`, built floating `SimulationBanner`, dynamic particle graph simulation, full sidebar breakdown, verified across 3 scenarios in real Chrome |
 | **ROUND 5** | Trust Layer: `flag_for_review` | ✅ Complete | 2026-09-01 | Registered `flag_for_review` WebMCP tool (strictly non-self-approving), built interactive Human Review Gate panel with physical Confirm/Dismiss buttons, human activity telemetry, and verified in real Chrome |
 | **ROUND 6** | `get_system_snapshot` & Regression Pass | ✅ Complete | 2026-09-01 | Registered `get_system_snapshot` (Tool 6/6), executed continuous E2E regression pass across all 6 tools in real Chrome with visual proof artifacts |
-| **ROUND 7** | Visual & UX Polish Pass | ⏳ Pending | — | High-contrast theme, smooth animations, empty/loading states |
+| **ROUND 7** | Visual & UX Polish Pass | ✅ Complete | 2026-09-01 | Cyberpunk dark theme, in-canvas zoom/fit toolbar, hover cards, keyboard shortcuts (H, S, R, ?, ESC), About architecture modal, sidebar 1-click WebMCP action triggers |
 | **ROUND 8** | Cross-Browser Live Testing | ⏳ Pending | — | ChatGPT in-app browser & Chrome WebMCP flag testing |
 | **ROUND 9** | Documentation & Repo Finalization | ⏳ Pending | — | Full docs, license verification, code snippets |
 | **ROUND 10**| Demo Video & Submission | ⏳ Pending | — | <3 min demo video, Devpost submission |
@@ -100,7 +100,7 @@
 - **WebMCP Tool Registration (`get_system_snapshot` - 6th Tool):**
   - Schema: `{ layer_filter?: 'all' | 'frontend' | 'backend' | 'shared-lib' | 'infra', include_incidents?: boolean, include_tests?: boolean }`
   - Returns complete topology (18 nodes, 28 edges, layer subsets), top critical risk bottlenecks (`auth-service 0.88`, `jwt-security-core 0.82`, `checkout-service 0.75`), incident index (5 incidents), and test suite health summary (16 tests, 2 failing, 3 flaky).
-- **Automated Chrome Full-Suite Regression Pass (`test_round6_regression.mjs`):**
+- **Verified in Real Chrome (`test_round6_regression.mjs` & Visual Screenshots in `verification/round6/`):**
   - 1. `navigator.modelContextTesting.listTools()`: Discovered all 6 tools with 100% schema integrity.
   - 2. `get_system_snapshot`: Returned complete architecture snapshot.
   - 3. `get_blast_radius`: Returned downstream transitive caller graph & critical risk calculation for `auth-service`.
@@ -108,4 +108,20 @@
   - 5. `get_change_provenance`: Returned 5 commits with 80% AI authorship ratio.
   - 6. `simulate_change_impact`: Visual simulation rendered on-screen (`regression-simulation-active.png`).
   - 7. `flag_for_review`: Registered non-self-approving review flag (`regression-flag-pending.png`), and physical human click transitioned it to approved (`regression-flag-confirmed.png`).
+- **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
+
+### ROUND 7 — Visual & UX Polish Pass (Completed)
+- **High-Contrast Dark Aesthetic:** Built obsidian dark theme (`#070a12`) with subtle coordinate grid pattern, high-contrast risk colors, and custom physics simulation dampening.
+- **In-Canvas Floating Toolbar (`GraphCanvas.tsx`):**
+  - Floating glassmorphism controls: Zoom In (`+`), Zoom Out (`-`), Fit-To-Screen (`Maximize2`), and Center on Hero Node (`Crosshair`).
+  - Hover Tooltip Preview Card: Instant module ID, layer, risk percentage, and description pill on mouseover.
+- **Interactive "About & Architecture" Modal (`AboutModal.tsx`):**
+  - Explains the core problem (AI agent blast myopia), the WebMCP paradigm, and lists all 6 tools in the suite.
+  - Documents keyboard shortcuts for rapid navigation (`H` for Hero, `S` for Simulation, `R` for Reset, `ESC` to Dismiss, `?` for Help).
+- **Sidebar 1-Click Action Triggers (`NodeDetailPanel.tsx`):**
+  - Added direct **`⚡ Simulate Blast`** and **`🚨 Flag for Review`** action buttons under each inspected node's risk gauge.
+- **Verified in Real Chrome (`test_round7_polish.mjs` & Visual Screenshots in `verification/round7/`):**
+  - 1. Hero node selection with 1-click action buttons ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-hero-selection.png)).
+  - 2. About & Architecture modal opened via keyboard shortcut `?` ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-about-modal.png)).
+  - 3. Hover tooltip card rendered over cyber-grid canvas ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-canvas-grid-hover.png)).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
