@@ -340,9 +340,10 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       )}
 
       {/* Floating Canvas Controls Overlay */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md text-xs">
+      <div role="toolbar" aria-label="Graph Canvas Controls" className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md text-xs">
         <button
           onClick={handleZoomIn}
+          aria-label="Zoom In Graph"
           className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           title="Zoom In"
         >
@@ -350,6 +351,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </button>
         <button
           onClick={handleZoomOut}
+          aria-label="Zoom Out Graph"
           className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           title="Zoom Out"
         >
@@ -358,6 +360,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         <div className="w-px h-4 bg-slate-700 mx-0.5" />
         <button
           onClick={handleFitView}
+          aria-label="Fit Graph to Screen"
           className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           title="Fit Graph to Screen"
         >
@@ -366,6 +369,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         {onSelectHeroNode && (
           <button
             onClick={onSelectHeroNode}
+            aria-label="Center Camera on Hero Node auth-service"
             className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-all cursor-pointer flex items-center gap-1"
             title="Center on Hero Node (auth-service)"
           >

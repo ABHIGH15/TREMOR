@@ -10,7 +10,12 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn select-none"
+    >
       <div className="relative w-full max-w-2xl max-h-[85vh] bg-[#0b0f19] border border-slate-700/80 rounded-2xl shadow-2xl overflow-y-auto flex flex-col font-sans">
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-[#0b0f19]/95 backdrop-blur-md z-10">
@@ -19,7 +24,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               <Sparkles className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+              <h2 id="about-modal-title" className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
                 About TREMOR
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   WebMCP Cockpit v0.1.0
@@ -33,6 +38,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
 
           <button
             onClick={onClose}
+            aria-label="Close About and Shortcuts Modal"
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
           >
             <X className="w-5 h-5" />

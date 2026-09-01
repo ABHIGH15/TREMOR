@@ -53,7 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Layer Filter Tabs */}
-      <div className="hidden md:flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs">
+      <nav aria-label="Architectural Layer Filters" className="hidden md:flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs">
         {(['all', 'frontend', 'backend', 'shared-lib', 'infra'] as const).map(layer => {
           const isActive = selectedLayer === layer;
           const label =
@@ -67,6 +67,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               key={layer}
               onClick={() => onSelectLayer(layer)}
+              aria-pressed={isActive}
+              aria-label={`Filter by ${label}`}
               className={`px-3 py-1 rounded-lg font-medium transition-all ${
                 isActive
                   ? 'bg-indigo-600 text-white shadow-sm'
@@ -77,13 +79,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* Right Controls & Quick Actions */}
       <div className="flex items-center gap-2.5">
         {/* Pending Review Badge if Active */}
         {pendingCount > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold animate-pulse shadow-sm">
+          <div aria-live="polite" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-semibold animate-pulse shadow-sm">
             <ShieldCheck className="w-4 h-4 text-amber-400" />
             <span>{pendingCount} Pending Approval</span>
           </div>
@@ -92,6 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Hero Node Quick Trigger */}
         <button
           onClick={onSelectHeroNode}
+          aria-label="Inspect Hero Risky Node auth-service (Shortcut: H)"
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-medium transition-all shadow-sm"
           title="Inspect Hero Risky Node (auth-service) [Key: H]"
         >
@@ -101,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Stats Pill */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
+        <div aria-label="System Metrics Summary" className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-300">
           <span className="flex items-center gap-1 text-red-400">
             <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
             {highRiskCount} High Risk
@@ -116,6 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Reset Camera Button */}
         <button
           onClick={onResetView}
+          aria-label="Reset Graph Zoom and Center Camera (Shortcut: R)"
           className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
           title="Reset Graph Zoom & Center [Key: R]"
         >
@@ -126,6 +130,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenAboutModal && (
           <button
             onClick={onOpenAboutModal}
+            aria-label="Open About TREMOR and Shortcuts Guide (Shortcut: ?)"
             className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-all cursor-pointer"
             title="About TREMOR & Shortcuts [Key: ?]"
           >
