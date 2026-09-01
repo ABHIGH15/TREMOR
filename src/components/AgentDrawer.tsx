@@ -11,7 +11,8 @@ import {
   Flame,
   Search,
   GitBranch,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { webMCPRegistry, WebMCPActivityLogItem, WebMCPToolDefinition } from '../webmcp/runtime';
 
@@ -24,8 +25,9 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
   const [activeTab, setActiveTab] = useState<'tester' | 'activity' | 'pending'>('tester');
   const [tools, setTools] = useState<WebMCPToolDefinition[]>([]);
   const [activityLogs, setActivityLogs] = useState<WebMCPActivityLogItem[]>([]);
-  const [selectedToolName, setSelectedToolName] = useState('get_blast_radius');
-  const [inputParam, setInputParam] = useState('auth-service');
+  const [selectedToolName, setSelectedToolName] = useState('simulate_change_impact');
+  const [inputParam, setInputParam] = useState('auth-service,redis-session-cluster');
+  const [customDesc, setCustomDesc] = useState('Refactor JWT sliding session expiry and distributed cache cluster');
   const [isExecuting, setIsExecuting] = useState(false);
   const [lastResponse, setLastResponse] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -41,10 +43,16 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
     };
   }, []);
 
-  const handleExecuteTool = async (toolName: string, param: string) => {
+  const handleExecuteTool = async (toolName: string, param: string, desc?: string) => {
     setIsExecuting(true);
     let payload: any = {};
-    if (toolName === 'get_blast_radius') {
+    if (toolName === 'simulate_change_impact') {
+      const touched = param.split(',').map(s => s.trim()).filter(Boolean);
+      payload = {
+        description: desc || customDesc || 'Proposed system modification',
+        touched_modules: touched.length > 0 ? touched : ['auth-service'],
+      };
+    } else if (toolName === 'get_blast_radius') {
       payload = { module: param };
     } else if (toolName === 'check_regression_history') {
       payload = { pattern: param };
@@ -140,7 +148,7 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
               onClick={onClearHighlights}
               className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
             >
-              Clear Graph Highlights
+              Reset Simulation & Highlights
             </button>
           )}
           <button
@@ -155,7 +163,7 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
 
       {/* Expandable Body */}
       {isOpen && (
-        <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 max-h-72 overflow-y-auto text-xs">
+        <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 max-h-80 overflow-y-auto text-xs">
           {activeTab === 'tester' && (
             <>
               {/* Quick Preset Buttons & Input */}
@@ -172,36 +180,61 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
 
                 {/* Quick Presets */}
                 <div className="space-y-1.5">
-                  <div className="text-[10px] text-slate-400 font-sans uppercase font-semibold tracking-wider">
-                    Quick Scenario Triggers (1-Click)
+                  <div className="text-[10px] text-slate-400 font-sans uppercase font-semibold tracking-wider flex items-center justify-between">
+                    <span>1-Click Scenarios</span>
+                    <span className="text-cyan-400">Round 4 Centerpiece</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  
+                  {/* Round 4 Centerpiece Presets */}
+                  <button
+                    onClick={() => {
+                      setSelectedToolName('simulate_change_impact');
+                      setInputParam('auth-service,redis-session-cluster');
+                      const desc = 'Refactor JWT claims validation and sliding session cache timeout in Redis cluster';
+                      setCustomDesc(desc);
+                      handleExecuteTool('simulate_change_impact', 'auth-service,redis-session-cluster', desc);
+                    }}
+                    className="w-full p-2.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 border border-red-500/40 text-left text-[11px] text-red-200 flex items-center justify-between transition-all group shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                      <div className="truncate">
+                        <span className="font-bold text-white">⚡ simulate(auth + redis)</span>
+                        <span className="text-[10px] text-red-300 block truncate">High risk token TTL refactor (P1 incident risk)</span>
+                      </div>
+                    </div>
+                    <Play className="w-3 h-3 text-red-400 opacity-80 group-hover:opacity-100 shrink-0" />
+                  </button>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                    <button
+                      onClick={() => {
+                        setSelectedToolName('simulate_change_impact');
+                        setInputParam('db-client-pool');
+                        const desc = 'Increase PostgreSQL connection pool limit from 50 to 200 without replica split';
+                        setCustomDesc(desc);
+                        handleExecuteTool('simulate_change_impact', 'db-client-pool', desc);
+                      }}
+                      className="p-2 rounded-lg bg-amber-950/30 hover:bg-amber-900/40 border border-amber-500/30 text-left text-[11px] text-amber-300 flex items-center justify-between transition-all group"
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <Flame className="w-3 h-3 text-amber-400 shrink-0" /> simulate(db-pool)
+                      </span>
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
+                    </button>
+
                     <button
                       onClick={() => {
                         setSelectedToolName('get_blast_radius');
                         setInputParam('auth-service');
                         handleExecuteTool('get_blast_radius', 'auth-service');
                       }}
-                      className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left text-[11px] text-red-300 flex items-center justify-between transition-all group"
+                      className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-[11px] text-slate-300 flex items-center justify-between transition-all group"
                     >
-                      <span className="flex items-center gap-1">
-                        <Flame className="w-3 h-3 text-red-400" /> blast_radius(auth-service)
+                      <span className="flex items-center gap-1 truncate">
+                        <GitBranch className="w-3 h-3 text-cyan-400 shrink-0" /> blast_radius(auth)
                       </span>
-                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setSelectedToolName('get_blast_radius');
-                        setInputParam('checkout-service');
-                        handleExecuteTool('get_blast_radius', 'checkout-service');
-                      }}
-                      className="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left text-[11px] text-amber-300 flex items-center justify-between transition-all group"
-                    >
-                      <span className="flex items-center gap-1">
-                        <GitBranch className="w-3 h-3 text-amber-400" /> blast_radius(checkout)
-                      </span>
-                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
                     </button>
 
                     <button
@@ -212,10 +245,10 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       }}
                       className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-[11px] text-slate-300 flex items-center justify-between transition-all group"
                     >
-                      <span className="flex items-center gap-1">
-                        <Search className="w-3 h-3 text-indigo-400" /> regression("session expiry")
+                      <span className="flex items-center gap-1 truncate">
+                        <Search className="w-3 h-3 text-indigo-400 shrink-0" /> regression("session")
                       </span>
-                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
                     </button>
 
                     <button
@@ -226,47 +259,60 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({ onClearHighlights }) =
                       }}
                       className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-left text-[11px] text-slate-300 flex items-center justify-between transition-all group"
                     >
-                      <span className="flex items-center gap-1">
-                        <Bot className="w-3 h-3 text-purple-400" /> provenance(auth-service)
+                      <span className="flex items-center gap-1 truncate">
+                        <Bot className="w-3 h-3 text-purple-400 shrink-0" /> provenance(auth)
                       </span>
-                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100" />
+                      <Play className="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 shrink-0" />
                     </button>
                   </div>
                 </div>
 
                 {/* Custom Tool Form */}
-                <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
-                  <select
-                    value={selectedToolName}
-                    onChange={e => setSelectedToolName(e.target.value)}
-                    className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
-                  >
-                    <option value="get_blast_radius">get_blast_radius(module)</option>
-                    <option value="check_regression_history">check_regression_history(pattern)</option>
-                    <option value="get_change_provenance">get_change_provenance(module)</option>
-                  </select>
+                <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedToolName}
+                      onChange={e => setSelectedToolName(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+                    >
+                      <option value="simulate_change_impact">simulate_change_impact(desc, modules)</option>
+                      <option value="get_blast_radius">get_blast_radius(module)</option>
+                      <option value="check_regression_history">check_regression_history(pattern)</option>
+                      <option value="get_change_provenance">get_change_provenance(module)</option>
+                    </select>
 
-                  <input
-                    type="text"
-                    value={inputParam}
-                    onChange={e => setInputParam(e.target.value)}
-                    placeholder="Parameter value..."
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
-                  />
+                    <input
+                      type="text"
+                      value={inputParam}
+                      onChange={e => setInputParam(e.target.value)}
+                      placeholder="Module IDs (comma-separated)..."
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
+                    />
 
-                  <button
-                    onClick={() => handleExecuteTool(selectedToolName, inputParam)}
-                    disabled={isExecuting}
-                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-sans font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
-                  >
-                    <Play className="w-3 h-3" />
-                    <span>Run</span>
-                  </button>
+                    <button
+                      onClick={() => handleExecuteTool(selectedToolName, inputParam, customDesc)}
+                      disabled={isExecuting}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-sans font-semibold flex items-center gap-1.5 transition-all shrink-0 shadow-sm"
+                    >
+                      <Play className="w-3 h-3" />
+                      <span>Run</span>
+                    </button>
+                  </div>
+
+                  {selectedToolName === 'simulate_change_impact' && (
+                    <input
+                      type="text"
+                      value={customDesc}
+                      onChange={e => setCustomDesc(e.target.value)}
+                      placeholder="Proposed change description..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-[10px] text-slate-300 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
+                    />
+                  )}
                 </div>
               </div>
 
               {/* Live JSON Result Payload */}
-              <div className="lg:col-span-7 p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-col font-mono text-[11px] h-full min-h-[160px]">
+              <div className="lg:col-span-7 p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-col font-mono text-[11px] h-full min-h-[180px]">
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5 text-slate-400 font-sans">
                   <span className="flex items-center gap-1.5">
                     <Terminal className="w-3 h-3 text-indigo-400" /> WebMCP Tool Result Payload

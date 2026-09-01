@@ -51,3 +51,16 @@ export interface SystemDataset {
   incidents: Incident[];
   tests: SystemTest[];
 }
+
+export interface SimulationResult {
+  description: string;
+  touched_modules: string[];
+  downstream_impacted_modules: string[];
+  all_affected_node_ids: string[];
+  risk_index: number;
+  safety_rating: 'CRITICAL RISK - HUMAN REVIEW REQUIRED' | 'ELEVATED RISK - REVIEW RECOMMENDED' | 'LOW RISK - SAFE FOR AUTOMATION';
+  affected_test_count: number;
+  failing_test_count: number;
+  historical_incident_count: number;
+  key_findings: string[];
+}

@@ -1,20 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import rawDataset from './data/dataset.json';
-import { SystemDataset, SystemNode, LayerType } from './types/dataset';
+import { SystemDataset, SystemNode, LayerType, SimulationResult } from './types/dataset';
 import { Navbar } from './components/Navbar';
 import { GraphCanvas } from './components/GraphCanvas';
 import { GraphLegend } from './components/GraphLegend';
 import { NodeDetailPanel } from './components/NodeDetailPanel';
 import { AgentDrawer } from './components/AgentDrawer';
-import { registerCoreReadTools } from './webmcp/tools';
+import { SimulationBanner } from './components/SimulationBanner';
+import { registerCoreTools } from './webmcp/tools';
 
 const dataset = rawDataset as SystemDataset;
 
 export default function App() {
   const [selectedNode, setSelectedNode] = useState<SystemNode | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<LayerType | 'all'>('all');
-  const [resetTrigger, setResetTrigger] = useState(0);
   const [impactedNodeIds, setImpactedNodeIds] = useState<string[]>([]);
+  const [simulation, setSimulation] = useState<SimulationResult | null>(null);
 
   // Hero node selection helper
   const handleSelectHeroNode = useCallback(() => {
@@ -22,30 +23,38 @@ export default function App() {
     setSelectedLayer('all');
     setSelectedNode(hero);
     setImpactedNodeIds([]);
+    setSimulation(null);
   }, []);
 
   const handleResetView = useCallback(() => {
-    setResetTrigger(prev => prev + 1);
     setImpactedNodeIds([]);
+    setSimulation(null);
+    setSelectedNode(null);
   }, []);
 
   const handleClearHighlights = useCallback(() => {
     setImpactedNodeIds([]);
+    setSimulation(null);
   }, []);
 
   // Register WebMCP Core Tools on mount
   useEffect(() => {
-    registerCoreReadTools(dataset, {
+    registerCoreTools(dataset, {
       onHighlightImpactZone: (nodeIds, targetNode) => {
         setImpactedNodeIds(nodeIds);
-        setSelectedNode(targetNode);
+        if (targetNode) setSelectedNode(targetNode);
       },
       onSelectNode: node => {
         setSelectedNode(node);
       },
+      onSimulateChangeImpact: sim => {
+        setSimulation(sim);
+        setSelectedNode(null); // Open full simulation breakdown view
+        setImpactedNodeIds(sim.all_affected_node_ids);
+      },
     });
 
-    console.log('🚀 [TREMOR Cockpit] WebMCP runtime & Core Read Tools initialized');
+    console.log('🚀 [TREMOR Cockpit] WebMCP runtime & Core Tools initialized');
   }, []);
 
   return (
@@ -63,28 +72,38 @@ export default function App() {
       <div className="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
         {/* Central Graph Visualization Canvas */}
         <main className="flex-1 relative h-full w-full overflow-hidden">
+          {/* Floating Simulation Centerpiece Banner */}
+          {simulation && (
+            <SimulationBanner
+              simulation={simulation}
+              onClear={handleClearHighlights}
+            />
+          )}
+
           <GraphCanvas
             dataset={dataset}
             selectedNode={selectedNode}
-            selectedLayer={selectedLayer}
+            activeLayer={selectedLayer}
             onSelectNode={setSelectedNode}
-            resetTrigger={resetTrigger}
             impactedNodeIds={impactedNodeIds}
+            simulation={simulation}
           />
           {/* Floating Graph Legend */}
           <GraphLegend />
         </main>
 
-        {/* Right Sidebar: Selected Node Detail Panel */}
+        {/* Right Sidebar: Selected Node Detail Panel & Simulation Breakdown */}
         <NodeDetailPanel
           node={selectedNode}
           dataset={dataset}
           onSelectNode={setSelectedNode}
           onSelectHeroNode={handleSelectHeroNode}
+          simulation={simulation}
+          onClearSimulation={handleClearHighlights}
         />
       </div>
 
-      {/* Bottom Drawer: WebMCP Agent Activity & Trust Layer */}
+      {/* Bottom Drawer: WebMCP Agent Activity & Interactive Runner */}
       <AgentDrawer onClearHighlights={handleClearHighlights} />
     </div>
   );

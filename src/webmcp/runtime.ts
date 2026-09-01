@@ -11,6 +11,7 @@ export interface WebMCPToolInputSchema {
     type: string;
     description: string;
     enum?: string[];
+    items?: { type: string; description?: string };
   }>;
   required?: string[];
 }

@@ -1,288 +1,332 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { Radio } from 'lucide-react';
-import { SystemDataset, SystemNode, LayerType } from '../types/dataset';
+import { SystemDataset, SystemNode, LayerType, SimulationResult } from '../types/dataset';
 import { getRiskColor, getNodeDependencies } from '../utils/graphHelpers';
 
 interface GraphCanvasProps {
   dataset: SystemDataset;
   selectedNode: SystemNode | null;
-  selectedLayer: LayerType | 'all';
   onSelectNode: (node: SystemNode | null) => void;
-  resetTrigger: number;
+  activeLayer: LayerType | 'all';
   impactedNodeIds?: string[];
+  simulation?: SimulationResult | null;
 }
 
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   dataset,
   selectedNode,
-  selectedLayer,
   onSelectNode,
-  resetTrigger,
+  activeLayer,
   impactedNodeIds = [],
+  simulation = null,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const fgRef = useRef<any>(undefined);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-  const [hoverNode, setHoverNode] = useState<SystemNode | null>(null);
+  const fgRef = useRef<any>(null);
+  const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [hoveredNode, setHoveredNode] = useState<SystemNode | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Resize observer to maintain fluid canvas
+  // Resize handler
   useEffect(() => {
-    if (!containerRef.current) return;
-    const updateDims = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
-      }
+    const handleResize = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
     };
-    updateDims();
-    const observer = new ResizeObserver(updateDims);
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Filter nodes & edges by layer if selected
+  // Filter nodes & edges by active layer
   const graphData = useMemo(() => {
-    let nodes = dataset.nodes;
-    if (selectedLayer !== 'all') {
-      nodes = nodes.filter(n => n.layer === selectedLayer);
+    let filteredNodes = dataset.nodes;
+    if (activeLayer !== 'all') {
+      filteredNodes = dataset.nodes.filter(n => n.layer === activeLayer);
     }
-    const nodeIds = new Set(nodes.map(n => n.id));
-    const links = dataset.edges.filter(
-      e =>
-        nodeIds.has(typeof e.source === 'object' ? (e.source as any).id : e.source) &&
-        nodeIds.has(typeof e.target === 'object' ? (e.target as any).id : e.target)
+    const nodeIds = new Set(filteredNodes.map(n => n.id));
+    const filteredEdges = dataset.edges.filter(
+      e => {
+        const src = typeof e.source === 'object' ? (e.source as any).id : e.source;
+        const tgt = typeof e.target === 'object' ? (e.target as any).id : e.target;
+        return nodeIds.has(src) && nodeIds.has(tgt);
+      }
     );
 
     return {
-      nodes: nodes.map(n => ({ ...n })),
-      links: links.map(l => ({ ...l })),
+      nodes: filteredNodes.map(n => ({ ...n })),
+      links: filteredEdges.map(e => ({ ...e })),
     };
-  }, [dataset, selectedLayer]);
+  }, [dataset, activeLayer]);
 
-  // Set of incident module IDs
-  const incidentModules = useMemo(() => {
-    return new Set(dataset.incidents.map(i => i.module));
-  }, [dataset.incidents]);
+  // Selected node dependencies for local dimming
+  const localDependencies = useMemo(() => {
+    if (!selectedNode) return null;
+    return getNodeDependencies(selectedNode.id, dataset);
+  }, [selectedNode, dataset]);
 
-  const impactedSet = useMemo(() => new Set(impactedNodeIds), [impactedNodeIds]);
+  // Handle center zoom on node selection or simulation
+  useEffect(() => {
+    if (simulation && simulation.touched_modules.length > 0 && fgRef.current) {
+      const firstTouched = dataset.nodes.find(n => n.id === simulation.touched_modules[0]);
+      if (firstTouched && (firstTouched as any).x !== undefined) {
+        fgRef.current.centerAt((firstTouched as any).x, (firstTouched as any).y, 800);
+        fgRef.current.zoom(1.8, 800);
+      }
+    } else if (selectedNode && fgRef.current) {
+      const nodeObj = graphData.nodes.find(n => n.id === selectedNode.id);
+      if (nodeObj && (nodeObj as any).x !== undefined) {
+        fgRef.current.centerAt((nodeObj as any).x, (nodeObj as any).y, 600);
+        fgRef.current.zoom(1.8, 600);
+      }
+    }
+  }, [selectedNode, simulation, graphData.nodes, dataset.nodes]);
 
-  // Connected node IDs if a node is selected or hovered
-  const highlightNodeIds = useMemo(() => {
-    if (impactedSet.size > 0) return impactedSet;
-    const active = selectedNode || hoverNode;
-    if (!active) return new Set<string>();
-    const deps = getNodeDependencies(active.id, dataset);
-    return new Set([active.id, ...deps.downstream.map(n => n.id), ...deps.upstream.map(n => n.id)]);
-  }, [selectedNode, hoverNode, dataset, impactedSet]);
-
-  // Handle simulation initialization / loading state
+  // Set timeout to clear loading skeleton
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitializing(false);
-      fgRef.current?.zoomToFit(400, 60);
-    }, 450);
+    }, 600);
     return () => clearTimeout(timer);
   }, []);
 
-  // Reset view on trigger or layer change
-  useEffect(() => {
-    if (fgRef.current) {
-      setTimeout(() => {
-        fgRef.current?.zoomToFit(400, 60);
-      }, 300);
-    }
-  }, [resetTrigger, selectedLayer]);
-
-  // Node drawing callback
-  const paintNode = useCallback(
+  // Custom node canvas renderer
+  const drawNode = useCallback(
     (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const isSelected = selectedNode?.id === node.id;
-      const isHovered = hoverNode?.id === node.id;
-      const isImpacted = impactedSet.has(node.id);
-      const isHighlighted = highlightNodeIds.has(node.id);
-      const hasIncident = incidentModules.has(node.id);
+      const isHovered = hoveredNode?.id === node.id;
       const isHero = node.id === 'auth-service';
 
-      const riskColor = getRiskColor(node.risk_score);
-      const radius = isSelected || isHero || isImpacted ? 9 : 7;
+      // Simulation checks
+      const isSimulationActive = !!simulation;
+      const isDirectlyTouched = simulation?.touched_modules.includes(node.id) ?? false;
+      const isDownstreamImpacted = simulation?.downstream_impacted_modules.includes(node.id) ?? false;
 
-      // Dim non-highlighted nodes when a selection or impact is active
-      const isDimmed = (selectedNode || hoverNode || impactedSet.size > 0) && !isHighlighted;
+      // WebMCP tool impact checks
+      const isToolImpacted = impactedNodeIds.includes(node.id);
+
+      // Connected in selection mode
+      const isConnected =
+        !localDependencies ||
+        node.id === selectedNode?.id ||
+        localDependencies.upstream.includes(node.id) ||
+        localDependencies.downstream.includes(node.id);
+
+      // Determine opacity
+      let opacity = 1.0;
+      if (isSimulationActive) {
+        opacity = isDirectlyTouched || isDownstreamImpacted ? 1.0 : 0.15;
+      } else if (impactedNodeIds.length > 0) {
+        opacity = isToolImpacted ? 1.0 : 0.2;
+      } else if (selectedNode && !isConnected) {
+        opacity = 0.25;
+      }
+
       ctx.save();
-      ctx.globalAlpha = isDimmed ? 0.22 : 1.0;
+      ctx.globalAlpha = opacity;
 
-      // Outer Selection / WebMCP Impact Zone Pulse Glow
-      if (isSelected || isImpacted || isHero || isHovered) {
+      const baseRadius = 6 + (node.risk_score || 0.5) * 6; // 6 to 12 radius
+      const riskColor = getRiskColor(node.risk_score);
+
+      // 1. Draw Simulation / Hero Pulses
+      if (isDirectlyTouched) {
+        // Glowing electric amber halo for touched modules
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + (isSelected || isImpacted ? 7 : 4), 0, 2 * Math.PI, false);
-        ctx.fillStyle = isImpacted
-          ? 'rgba(239, 68, 68, 0.4)'
-          : isSelected
-          ? 'rgba(99, 102, 241, 0.35)'
-          : 'rgba(239, 68, 68, 0.25)';
+        ctx.arc(node.x, node.y, baseRadius + 8, 0, 2 * Math.PI, false);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
         ctx.fill();
-        ctx.strokeStyle = isImpacted ? '#ef4444' : isSelected ? '#818cf8' : '#ef4444';
         ctx.lineWidth = 2 / globalScale;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.setLineDash([4, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (isDownstreamImpacted) {
+        // Red alert ring for downstream ripple nodes
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, baseRadius + 6, 0, 2 * Math.PI, false);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.fill();
+        ctx.lineWidth = 2 / globalScale;
+        ctx.strokeStyle = '#ef4444';
+        ctx.stroke();
+      } else if (isHero) {
+        // Hero pulse halo
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, baseRadius + 4, 0, 2 * Math.PI, false);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+        ctx.fill();
+        ctx.lineWidth = 1.5 / globalScale;
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
         ctx.stroke();
       }
 
-      // Active Incident Ring
-      if (hasIncident) {
+      // 2. Incident indicator ring
+      const hasIncidents = dataset.incidents.some(i => i.module === node.id);
+      if (hasIncidents && !isDirectlyTouched && !isDownstreamImpacted) {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, radius + 2.5, 0, 2 * Math.PI, false);
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 1.8 / globalScale;
-        ctx.setLineDash([2, 2]);
+        ctx.arc(node.x, node.y, baseRadius + 3, 0, 2 * Math.PI, false);
+        ctx.strokeStyle = '#f87171';
+        ctx.lineWidth = 1.5 / globalScale;
+        ctx.setLineDash([3, 2]);
         ctx.stroke();
         ctx.setLineDash([]);
       }
 
-      // Main Node Circle
+      // 3. Selection / Hover Outer Glow Ring
+      if (isSelected || isHovered) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, baseRadius + 4, 0, 2 * Math.PI, false);
+        ctx.strokeStyle = isSelected ? '#38bdf8' : '#94a3b8';
+        ctx.lineWidth = 2.5 / globalScale;
+        ctx.stroke();
+      }
+
+      // 4. Main Node Body
       ctx.beginPath();
-      ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-      ctx.fillStyle = isImpacted ? '#ef4444' : riskColor;
+      ctx.arc(node.x, node.y, baseRadius, 0, 2 * Math.PI, false);
+      ctx.fillStyle = isDirectlyTouched ? '#f59e0b' : riskColor;
       ctx.fill();
-      ctx.strokeStyle = isSelected || isImpacted ? '#ffffff' : '#0f172a';
       ctx.lineWidth = 1.5 / globalScale;
+      ctx.strokeStyle = isDirectlyTouched ? '#ffffff' : '#0f172a';
       ctx.stroke();
 
-      // Node Label (rendered when scaled or highlighted)
-      if (globalScale > 0.75 || isSelected || isHero || isHighlighted || isImpacted) {
-        const fontSize = Math.max(10 / globalScale, 3);
-        ctx.font = `600 ${fontSize}px "Plus Jakarta Sans", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
+      // 5. Node Text Label
+      const fontSize = Math.max(10 / globalScale, 3);
+      ctx.font = `${isDirectlyTouched || isSelected ? 'bold ' : ''}${fontSize}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
 
-        // Text background pill for maximum legibility
-        const text = node.label;
-        const textWidth = ctx.measureText(text).width;
-        const bgPadding = 2 / globalScale;
-        const textY = node.y + radius + 3 / globalScale;
+      // Label background pill
+      const label = node.label || node.id;
+      const textWidth = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(
+        node.x - textWidth / 2 - 2 / globalScale,
+        node.y + baseRadius + 3 / globalScale,
+        textWidth + 4 / globalScale,
+        fontSize + 3 / globalScale
+      );
 
-        ctx.fillStyle = isImpacted ? 'rgba(153, 27, 27, 0.9)' : 'rgba(11, 15, 25, 0.85)';
-        ctx.fillRect(
-          node.x - textWidth / 2 - bgPadding,
-          textY - 1 / globalScale,
-          textWidth + bgPadding * 2,
-          fontSize + bgPadding * 2
-        );
+      ctx.fillStyle = isDirectlyTouched ? '#fef08a' : isSelected ? '#38bdf8' : '#f1f5f9';
+      ctx.fillText(label, node.x, node.y + baseRadius + 4 / globalScale);
 
-        ctx.fillStyle = isSelected || isImpacted ? '#ffffff' : '#e2e8f0';
-        ctx.fillText(text, node.x, textY);
-
-        // Layer sub-badge
-        if (globalScale > 1.2 || isSelected || isImpacted) {
-          const subFontSize = Math.max(8 / globalScale, 2.5);
-          ctx.font = `500 ${subFontSize}px "JetBrains Mono", monospace`;
-          ctx.fillStyle = isImpacted ? '#fca5a5' : '#94a3b8';
-          ctx.fillText(`[${node.layer}]`, node.x, textY + fontSize + 2 / globalScale);
-        }
+      // Simulation Direct Badge
+      if (isDirectlyTouched) {
+        const badgeFont = Math.max(8 / globalScale, 2.5);
+        ctx.font = `bold ${badgeFont}px Inter, sans-serif`;
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillText('⚡ MODIFIED', node.x, node.y - baseRadius - 10 / globalScale);
       }
 
       ctx.restore();
     },
-    [selectedNode, hoverNode, highlightNodeIds, incidentModules, impactedSet]
+    [selectedNode, hoveredNode, localDependencies, dataset.incidents, impactedNodeIds, simulation]
+  );
+
+  // Custom link renderer with directional arrows and particle speeds
+  const linkColor = useCallback(
+    (link: any) => {
+      const isSimulationActive = !!simulation;
+      const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+      const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+
+      if (isSimulationActive) {
+        const isTouchedEdge =
+          simulation.touched_modules.includes(srcId) ||
+          simulation.touched_modules.includes(tgtId) ||
+          (simulation.all_affected_node_ids.includes(srcId) && simulation.all_affected_node_ids.includes(tgtId));
+
+        return isTouchedEdge ? '#f59e0b' : 'rgba(51, 65, 85, 0.15)';
+      }
+
+      if (impactedNodeIds.length > 0) {
+        const isImpactedEdge = impactedNodeIds.includes(srcId) && impactedNodeIds.includes(tgtId);
+        return isImpactedEdge ? '#ef4444' : 'rgba(51, 65, 85, 0.15)';
+      }
+
+      if (selectedNode) {
+        const isSelectedLink =
+          srcId === selectedNode.id || tgtId === selectedNode.id;
+        return isSelectedLink ? '#38bdf8' : 'rgba(51, 65, 85, 0.25)';
+      }
+
+      return 'rgba(71, 85, 105, 0.45)';
+    },
+    [selectedNode, impactedNodeIds, simulation]
+  );
+
+  const linkWidth = useCallback(
+    (link: any) => {
+      const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+      const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+
+      if (simulation) {
+        const isTouchedEdge =
+          simulation.all_affected_node_ids.includes(srcId) &&
+          simulation.all_affected_node_ids.includes(tgtId);
+        return isTouchedEdge ? 2.5 : 0.5;
+      }
+
+      if (impactedNodeIds.length > 0) {
+        const isImpactedEdge = impactedNodeIds.includes(srcId) && impactedNodeIds.includes(tgtId);
+        return isImpactedEdge ? 2.5 : 0.5;
+      }
+
+      if (selectedNode) {
+        return srcId === selectedNode.id || tgtId === selectedNode.id ? 2.0 : 0.6;
+      }
+      return 1.0;
+    },
+    [selectedNode, impactedNodeIds, simulation]
   );
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-[#070a12] overflow-hidden">
-      {/* Loading Skeleton & Physics Initializing State */}
+    <div className="relative w-full h-full bg-slate-950 overflow-hidden select-none">
+      {/* Loading Skeleton */}
       {isInitializing && (
-        <div className="absolute inset-0 z-30 bg-[#070a12]/95 backdrop-blur-md flex flex-col items-center justify-center gap-3 select-none">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-sm">
           <div className="relative flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
-            <Radio className="w-6 h-6 text-indigo-400 absolute animate-pulse" />
+            <div className="w-16 h-16 rounded-full border-2 border-cyan-500/20 border-t-cyan-500 animate-spin" />
+            <Radio className="absolute w-6 h-6 text-cyan-400 animate-pulse" />
           </div>
-          <div className="text-center space-y-1">
-            <div className="text-xs font-bold text-slate-200 uppercase tracking-widest font-mono">
-              Simulating System Topology Physics
-            </div>
-            <div className="text-[11px] text-slate-400 font-mono">
-              Layouting 18 architecture nodes & 28 dependency links...
-            </div>
-          </div>
+          <p className="mt-4 text-xs font-mono tracking-wider text-cyan-300 uppercase">
+            Simulating System Topology Physics...
+          </p>
         </div>
       )}
 
+      {/* Force Graph */}
       <ForceGraph2D
         ref={fgRef}
         width={dimensions.width}
         height={dimensions.height}
         graphData={graphData}
-        nodeLabel={(node: any) => `
-          <div style="background:#0f172a; color:#f8fafc; padding:8px 12px; border-radius:8px; font-family:sans-serif; font-size:12px; border:1px solid #334155; box-shadow:0 10px 15px -3px rgba(0,0,0,0.5);">
-            <div style="font-weight:700; color:#fff;">${node.label}</div>
-            <div style="color:#94a3b8; font-size:11px; font-family:monospace;">${node.id}</div>
-            <div style="margin-top:4px; font-size:11px;">
-              <span style="color:${getRiskColor(node.risk_score)}; font-weight:bold;">Risk Score: ${node.risk_score}</span>
-              &nbsp;•&nbsp;
-              <span style="text-transform:uppercase; color:#818cf8;">${node.layer}</span>
-            </div>
-            ${incidentModules.has(node.id) ? '<div style="margin-top:4px; color:#f59e0b; font-weight:600; font-size:10px;">⚠️ Active Incident History</div>' : ''}
-          </div>
-        `}
-        nodeCanvasObject={paintNode}
+        nodeCanvasObject={drawNode}
         nodePointerAreaPaint={(node: any, color, ctx) => {
+          ctx.fillStyle = color;
           ctx.beginPath();
           ctx.arc(node.x, node.y, 14, 0, 2 * Math.PI, false);
-          ctx.fillStyle = color;
           ctx.fill();
         }}
-        linkColor={(link: any) => {
-          const srcId = typeof link.source === 'object' ? link.source.id : link.source;
-          const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-          if (impactedSet.has(srcId) && impactedSet.has(tgtId)) {
-            return 'rgba(239, 68, 68, 0.85)'; // Highlighted Red Impact link
-          }
-          if (selectedNode) {
-            if (srcId === selectedNode.id || tgtId === selectedNode.id) {
-              return '#818cf8'; // Highlighted Indigo
-            }
-            return 'rgba(51, 65, 85, 0.15)'; // Dimmed
-          }
-          if (link.critical) return 'rgba(239, 68, 68, 0.45)';
-          return 'rgba(71, 85, 105, 0.4)';
-        }}
-        linkWidth={(link: any) => {
-          const srcId = typeof link.source === 'object' ? link.source.id : link.source;
-          const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-          if (impactedSet.has(srcId) && impactedSet.has(tgtId)) {
-            return 3;
-          }
-          if (selectedNode && (srcId === selectedNode.id || tgtId === selectedNode.id)) {
-            return 2.5;
-          }
-          return link.critical ? 1.8 : 1.2;
-        }}
-        linkDirectionalArrowLength={4}
-        linkDirectionalArrowRelPos={0.9}
-        linkDirectionalParticles={(link: any) => {
-          const srcId = typeof link.source === 'object' ? link.source.id : link.source;
-          const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-          if (impactedSet.has(srcId) && impactedSet.has(tgtId)) {
-            return 4;
-          }
-          if (selectedNode && (srcId === selectedNode.id || tgtId === selectedNode.id)) {
-            return 3;
-          }
-          return link.critical ? 1 : 0;
-        }}
-        linkDirectionalParticleSpeed={0.007}
-        linkDirectionalParticleWidth={2.5}
+        linkColor={linkColor}
+        linkWidth={linkWidth}
+        linkDirectionalParticles={simulation ? 4 : impactedNodeIds.length > 0 ? 3 : 2}
+        linkDirectionalParticleSpeed={simulation ? 0.015 : impactedNodeIds.length > 0 ? 0.01 : 0.005}
+        linkDirectionalParticleWidth={simulation ? 2.5 : 1.8}
+        linkDirectionalParticleColor={linkColor}
+        linkDirectionalArrowLength={3.5}
+        linkDirectionalArrowRelPos={1}
         onNodeClick={(node: any) => {
-          onSelectNode(node as SystemNode);
+          const raw = dataset.nodes.find(n => n.id === node.id);
+          if (raw) onSelectNode(raw);
         }}
         onNodeHover={(node: any) => {
-          setHoverNode(node ? (node as SystemNode) : null);
+          if (node) {
+            const raw = dataset.nodes.find(n => n.id === node.id);
+            setHoveredNode(raw || null);
+          } else {
+            setHoveredNode(null);
+          }
         }}
-        onBackgroundClick={() => {
-          onSelectNode(null);
-        }}
-        cooldownTicks={120}
+        onBackgroundClick={() => onSelectNode(null)}
+        cooldownTicks={100}
         d3AlphaDecay={0.02}
         d3VelocityDecay={0.3}
       />

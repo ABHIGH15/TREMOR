@@ -1,9 +1,10 @@
-import { SystemDataset, SystemNode } from '../types/dataset';
+import { SystemDataset, SystemNode, SimulationResult } from '../types/dataset';
 import { webMCPRegistry, WebMCPToolDefinition } from './runtime';
 
 export interface ToolCallbacks {
-  onHighlightImpactZone?: (impactedNodeIds: string[], targetNode: SystemNode) => void;
+  onHighlightImpactZone?: (impactedNodeIds: string[], targetNode?: SystemNode) => void;
   onSelectNode?: (node: SystemNode) => void;
+  onSimulateChangeImpact?: (simulation: SimulationResult) => void;
 }
 
 /**
@@ -31,9 +32,9 @@ function computeDownstreamTransitive(rootId: string, dataset: SystemDataset): st
 }
 
 /**
- * Register Round 3 Core Read Tools
+ * Register Round 3 & Round 4 WebMCP Tools
  */
-export async function registerCoreReadTools(dataset: SystemDataset, callbacks: ToolCallbacks = {}) {
+export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolCallbacks = {}) {
   const nodeMap = new Map(dataset.nodes.map(n => [n.id, n]));
 
   // Tool 1: get_blast_radius
@@ -266,8 +267,154 @@ export async function registerCoreReadTools(dataset: SystemDataset, callbacks: T
     },
   };
 
-  // Register in WebMCP registry (which updates document.modelContext & navigator.modelContext)
+  // Tool 4: simulate_change_impact (Centerpiece Tool)
+  const simulateChangeImpactTool: WebMCPToolDefinition = {
+    name: 'simulate_change_impact',
+    description: 'Simulates the systemic blast impact of a proposed code refactor, schema change, or architectural alteration across touched modules. Computes downstream risk ripple effects, affected test suites, regression precedents, and visually illuminates the live graph simulation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+          description: 'Natural language summary of the proposed change (e.g. "Refactor sliding session token TTL to 15m and add Redis multi-region replication")',
+        },
+        touched_modules: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of module IDs directly modified by this proposed change (e.g. ["auth-service", "redis-session-cluster"])',
+        },
+      },
+      required: ['description', 'touched_modules'],
+    },
+    execute: async ({ description, touched_modules }: { description: string; touched_modules: string[] }) => {
+      if (!Array.isArray(touched_modules) || touched_modules.length === 0) {
+        return {
+          isError: true,
+          content: [{ type: 'text', text: JSON.stringify({ error: 'touched_modules array must contain at least one valid module ID' }) }],
+        };
+      }
+
+      // Collect all downstream callers across all touched modules
+      const downstreamSet = new Set<string>();
+      touched_modules.forEach(modId => {
+        const ds = computeDownstreamTransitive(modId, dataset);
+        ds.forEach(d => {
+          if (!touched_modules.includes(d)) {
+            downstreamSet.add(d);
+          }
+        });
+      });
+
+      const downstreamList = Array.from(downstreamSet);
+      const allAffectedIds = Array.from(new Set([...touched_modules, ...downstreamList]));
+      const allAffectedNodes = allAffectedIds.map(id => nodeMap.get(id)!).filter(Boolean);
+
+      // Check matching regression history
+      const descLower = description.toLowerCase();
+      const relevantIncidents = dataset.incidents.filter(inc => {
+        const modMatch = allAffectedIds.includes(inc.module);
+        const descMatch = descLower.split(' ').some(word => word.length > 3 && inc.description.toLowerCase().includes(word));
+        return modMatch || descMatch;
+      });
+
+      // Collect affected test suites
+      const affectedTests = dataset.tests.filter(t => allAffectedIds.includes(t.module));
+      const failingTests = affectedTests.filter(t => t.status === 'failing');
+      const flakyTests = affectedTests.filter(t => t.status === 'flaky');
+
+      // Calculate Predicted Blast Risk Index
+      const touchedNodes = touched_modules.map(id => nodeMap.get(id)!).filter(Boolean);
+      const touchedAvgRisk = touchedNodes.reduce((acc, n) => acc + n.risk_score, 0) / (touchedNodes.length || 1);
+      const downstreamNodes = downstreamList.map(id => nodeMap.get(id)!).filter(Boolean);
+      const downstreamAvgRisk = downstreamNodes.length > 0
+        ? downstreamNodes.reduce((acc, n) => acc + n.risk_score, 0) / downstreamNodes.length
+        : 0;
+
+      // Risk score: 60% touched risk, 30% downstream severity, 10% incident/flakiness penalty
+      const incidentPenalty = relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1')) ? 0.15 : 0.05;
+      const testPenalty = failingTests.length > 0 ? 0.1 : flakyTests.length > 0 ? 0.05 : 0;
+      const calculatedRisk = Math.min(1.0, Number(((touchedAvgRisk * 0.5) + (downstreamAvgRisk * 0.3) + incidentPenalty + testPenalty).toFixed(2)));
+
+      let safetyRating: 'CRITICAL RISK - HUMAN REVIEW REQUIRED' | 'ELEVATED RISK - REVIEW RECOMMENDED' | 'LOW RISK - SAFE FOR AUTOMATION' = 'LOW RISK - SAFE FOR AUTOMATION';
+      if (calculatedRisk >= 0.65 || relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1'))) {
+        safetyRating = 'CRITICAL RISK - HUMAN REVIEW REQUIRED';
+      } else if (calculatedRisk >= 0.40) {
+        safetyRating = 'ELEVATED RISK - REVIEW RECOMMENDED';
+      }
+
+      // Key findings
+      const keyFindings: string[] = [
+        `Directly alters ${touched_modules.length} module(s): ${touched_modules.join(', ')}`,
+        `Propagates downstream to ${downstreamList.length} dependent service(s): ${downstreamList.slice(0, 4).join(', ')}${downstreamList.length > 4 ? ` (+${downstreamList.length - 4} more)` : ''}`,
+      ];
+
+      if (relevantIncidents.length > 0) {
+        keyFindings.push(`⚠️ Historical regression hazard: ${relevantIncidents.length} related past incident(s) detected (e.g. ${relevantIncidents[0].id} - ${relevantIncidents[0].description.substring(0, 60)}...)`);
+      }
+      if (failingTests.length > 0 || flakyTests.length > 0) {
+        keyFindings.push(`🧪 Test suite vulnerability: ${failingTests.length} failing and ${flakyTests.length} flaky test suites in blast path`);
+      }
+
+      const simulationData: SimulationResult = {
+        description,
+        touched_modules,
+        downstream_impacted_modules: downstreamList,
+        all_affected_node_ids: allAffectedIds,
+        risk_index: calculatedRisk,
+        safety_rating: safetyRating,
+        affected_test_count: affectedTests.length,
+        failing_test_count: failingTests.length,
+        historical_incident_count: relevantIncidents.length,
+        key_findings: keyFindings,
+      };
+
+      // Trigger UI Simulation Highlights
+      if (callbacks.onSimulateChangeImpact) {
+        callbacks.onSimulateChangeImpact(simulationData);
+      } else if (callbacks.onHighlightImpactZone) {
+        callbacks.onHighlightImpactZone(allAffectedIds, touchedNodes[0]);
+      }
+
+      const result = {
+        simulation_status: 'SUCCESS',
+        proposed_change: description,
+        risk_assessment: {
+          predicted_blast_risk_index: calculatedRisk,
+          safety_rating: safetyRating,
+          requires_human_approval_gate: safetyRating.includes('REQUIRED'),
+        },
+        impact_scope: {
+          directly_touched_modules: touched_modules.map(id => {
+            const n = nodeMap.get(id);
+            return { id, label: n?.label, layer: n?.layer, risk_score: n?.risk_score };
+          }),
+          downstream_affected_services: downstreamList.map(id => {
+            const n = nodeMap.get(id);
+            return { id, label: n?.label, layer: n?.layer, risk_score: n?.risk_score };
+          }),
+          total_blast_radius_nodes: allAffectedNodes.length,
+        },
+        regression_risk: {
+          matching_incidents_count: relevantIncidents.length,
+          incidents: relevantIncidents.map(i => ({ id: i.id, severity: i.severity, module: i.module, description: i.description })),
+        },
+        test_coverage_status: {
+          total_impacted_tests: affectedTests.length,
+          failing_tests: failingTests.map(t => ({ module: t.module, test: t.test_name })),
+          flaky_tests: flakyTests.map(t => ({ module: t.module, test: t.test_name, flakiness: t.flakiness_score })),
+        },
+        key_findings: keyFindings,
+      };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  };
+
+  // Register in WebMCP registry
   await webMCPRegistry.registerTool(getBlastRadiusTool);
   await webMCPRegistry.registerTool(checkRegressionHistoryTool);
   await webMCPRegistry.registerTool(getChangeProvenanceTool);
+  await webMCPRegistry.registerTool(simulateChangeImpactTool);
 }
