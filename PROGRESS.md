@@ -8,8 +8,8 @@
 
 | Round | Title | Status | Completed At | Notes |
 |---|---|---|---|---|
-| **ROUND 0** | Project Setup & Live Skeleton | 🔄 In Progress | — | React + TS + Tailwind + MIT License + Git init |
-| **ROUND 1** | Data Layer (`dataset.json`) | ⏳ Pending | — | 15-20 nodes, 25-30 edges, commits, incidents, tests |
+| **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | React 18 + TS + Tailwind + MIT License + Git repo initialized + verified build |
+| **ROUND 1** | Data Layer (`dataset.json`) | ⏳ Next | — | 15-20 nodes, 25-30 edges, commits, incidents, tests |
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ⏳ Pending | — | Interactive graph, risk coloring, node detail panel |
 | **ROUND 3** | WebMCP Core Read Tools | ⏳ Pending | — | `get_blast_radius`, `check_regression_history`, `get_change_provenance` |
 | **ROUND 4** | Centerpiece: `simulate_change_impact` | ⏳ Pending | — | Visual live graph highlights on proposed change |
@@ -24,8 +24,8 @@
 
 ## Detailed Round Logs
 
-### ROUND 0 — Project Setup & Live Skeleton
-- **Created:** `package.json`, `vite.config.ts`, `tsconfig.json`, `tailwind.config.js`, `postcss.config.js`, `index.html`.
-- **Created Assets:** `LICENSE` (MIT), `README.md`, `PROGRESS.md`, `.gitignore`.
-- **Source Code:** `src/main.tsx`, `src/App.tsx`, `src/index.css`.
-- **Testing:** Local compilation and packaging verification.
+### ROUND 0 — Project Setup & Live Skeleton (Completed)
+- **Scaffolded Project:** React 18, TypeScript, Tailwind CSS, Vite.
+- **Root Files & Documentation:** `LICENSE` (MIT), `README.md` (with WebMCP code snippet), `PROGRESS.md`, `.gitignore`.
+- **Verified Build:** `npm run build` completed cleanly (0 errors, 0 warnings).
+- **Git Repo:** Initialized repository on branch `main` with initial commit.
