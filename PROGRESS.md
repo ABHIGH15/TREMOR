@@ -8,7 +8,7 @@
 
 | Round | Title | Status | Completed At | Notes |
 |---|---|---|---|---|
-| **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | React 18 + TS + Tailwind + MIT License + Git repo initialized + verified build |
+| **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | Live at [https://blast-radius-one.vercel.app](https://blast-radius-one.vercel.app) & [GitHub Repo](https://github.com/ABHIGH15/BLAST_RADIUS) |
 | **ROUND 1** | Data Layer (`dataset.json`) | ⏳ Next | — | 15-20 nodes, 25-30 edges, commits, incidents, tests |
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ⏳ Pending | — | Interactive graph, risk coloring, node detail panel |
 | **ROUND 3** | WebMCP Core Read Tools | ⏳ Pending | — | `get_blast_radius`, `check_regression_history`, `get_change_provenance` |

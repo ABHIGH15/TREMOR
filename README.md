@@ -3,6 +3,10 @@
 > **Tagline:** *See what your AI agent is about to break — before it does.*  
 > Built for the **WebMCP Challenge 2026** (OpenAI, Google Chrome, Vercel, Cloudflare, Netlify, Shopify, Render).
 
+🌐 **Live URL:** [https://blast-radius-one.vercel.app](https://blast-radius-one.vercel.app)  
+📦 **GitHub:** [https://github.com/ABHIGH15/BLAST_RADIUS](https://github.com/ABHIGH15/BLAST_RADIUS)  
+📜 **License:** [MIT](./LICENSE)
+
 ---
 
 ## Overview
