@@ -330,16 +330,19 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
         ? downstreamNodes.reduce((acc, n) => acc + n.risk_score, 0) / downstreamNodes.length
         : 0;
 
-      // Risk score: 60% touched risk, 30% downstream severity, 10% incident/flakiness penalty
-      const incidentPenalty = relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1')) ? 0.15 : 0.05;
+      // Risk score calculation: 50% touched risk, 30% downstream severity, 10% incident penalty, 10% test penalty
+      const hasCriticalIncident = relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1'));
+      const incidentPenalty = hasCriticalIncident ? 0.15 : relevantIncidents.length > 0 ? 0.05 : 0;
       const testPenalty = failingTests.length > 0 ? 0.1 : flakyTests.length > 0 ? 0.05 : 0;
       const calculatedRisk = Math.min(1.0, Number(((touchedAvgRisk * 0.5) + (downstreamAvgRisk * 0.3) + incidentPenalty + testPenalty).toFixed(2)));
 
       let safetyRating: 'CRITICAL RISK - HUMAN REVIEW REQUIRED' | 'ELEVATED RISK - REVIEW RECOMMENDED' | 'LOW RISK - SAFE FOR AUTOMATION' = 'LOW RISK - SAFE FOR AUTOMATION';
-      if (calculatedRisk >= 0.65 || relevantIncidents.some(i => i.severity.startsWith('P0') || i.severity.startsWith('P1'))) {
+      if (calculatedRisk >= 0.75 || (hasCriticalIncident && calculatedRisk >= 0.70)) {
         safetyRating = 'CRITICAL RISK - HUMAN REVIEW REQUIRED';
       } else if (calculatedRisk >= 0.40) {
         safetyRating = 'ELEVATED RISK - REVIEW RECOMMENDED';
+      } else {
+        safetyRating = 'LOW RISK - SAFE FOR AUTOMATION';
       }
 
       // Key findings
