@@ -14,7 +14,7 @@ export default function App() {
             <ShieldAlert className="w-8 h-8 text-red-400" />
           </div>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            BLAST RADIUS
+            TREMOR
           </h1>
         </div>
 
@@ -29,7 +29,7 @@ export default function App() {
             </span>
             <span className="text-emerald-400 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              ROUND 0 READY
+              TREMOR SKELETON READY
             </span>
           </div>
           <p className="text-slate-400">// Next step: Load dependency graph and WebMCP tool runtime</p>

@@ -1,4 +1,4 @@
-# BLAST RADIUS — Build Progress Tracker
+# TREMOR — Build Progress Tracker
 
 **WebMCP Challenge 2026 Submission**
 
@@ -8,7 +8,8 @@
 
 | Round | Title | Status | Completed At | Notes |
 |---|---|---|---|---|
-| **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | Live at [https://blast-radius-one.vercel.app](https://blast-radius-one.vercel.app) & [GitHub Repo](https://github.com/ABHIGH15/BLAST_RADIUS) |
+| **ROUND 0** | Project Setup & Live Skeleton | ✅ Complete | 2026-09-01 | Initial skeleton, MIT License, build verified |
+| **ROUND 0.5**| Branding Update to TREMOR | ✅ Complete | 2026-09-01 | Live at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app) & [GitHub Repo](https://github.com/ABHIGH15/TREMOR) |
 | **ROUND 1** | Data Layer (`dataset.json`) | ⏳ Next | — | 15-20 nodes, 25-30 edges, commits, incidents, tests |
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ⏳ Pending | — | Interactive graph, risk coloring, node detail panel |
 | **ROUND 3** | WebMCP Core Read Tools | ⏳ Pending | — | `get_blast_radius`, `check_regression_history`, `get_change_provenance` |
@@ -25,7 +26,12 @@
 ## Detailed Round Logs
 
 ### ROUND 0 — Project Setup & Live Skeleton (Completed)
-- **Scaffolded Project:** React 18, TypeScript, Tailwind CSS, Vite.
-- **Root Files & Documentation:** `LICENSE` (MIT), `README.md` (with WebMCP code snippet), `PROGRESS.md`, `.gitignore`.
-- **Verified Build:** `npm run build` completed cleanly (0 errors, 0 warnings).
-- **Git Repo:** Initialized repository on branch `main` with initial commit.
+- Scaffolded project with React 18, TypeScript, Tailwind CSS, and Vite.
+- Added root `LICENSE` (MIT) and initial config.
+- Verified build and zero-error deployment.
+
+### ROUND 0.5 — Rename Project to TREMOR (Completed)
+- Renamed `package.json` name to `tremor`.
+- Updated `index.html`, `src/App.tsx`, `LICENSE`, `README.md`, and `PROGRESS.md` with TREMOR branding.
+- Renamed GitHub repository to `https://github.com/ABHIGH15/TREMOR` via `gh repo rename`.
+- Deployed to Vercel production at `https://tremor-cockpit.vercel.app`.
