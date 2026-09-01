@@ -13,7 +13,7 @@
 | **ROUND 1** | Data Layer (`dataset.json`) | ✅ Complete | 2026-09-01 | 18 nodes, 28 edges, 20 commits (60% AI), 5 incidents, 16 tests, hero: `auth-service` (0.88 risk) |
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ✅ Complete | 2026-09-01 | Interactive 2D force graph, risk coloring, legend, layer filtering, full node detail sidebar |
 | **ROUND 3** | WebMCP Core Read Tools | ✅ Complete | 2026-09-01 | Registered `get_blast_radius`, `check_regression_history`, `get_change_provenance` on `document.modelContext` + Interactive Tool Runner + Activity Stream |
-| **ROUND 4** | Centerpiece: `simulate_change_impact` | ⏳ Pending | — | Visual live graph highlights on proposed change |
+| **ROUND 4** | Centerpiece: `simulate_change_impact` | ✅ Complete | 2026-09-01 | Registered `simulate_change_impact` tool on `document.modelContext`, built floating `SimulationBanner`, dynamic particle graph simulation, full sidebar breakdown, verified across 3 scenarios in real Chrome |
 | **ROUND 5** | Trust Layer: `flag_for_review` | ⏳ Pending | — | Pending review panel with human-only Confirm/Dismiss |
 | **ROUND 6** | `get_system_snapshot` & Regression Pass | ⏳ Pending | — | Full 6-tool suite validation |
 | **ROUND 7** | Visual & UX Polish Pass | ⏳ Pending | — | High-contrast theme, smooth animations, empty/loading states |
@@ -50,7 +50,7 @@
 - **Verified:** Zero compilation errors, clean bundle build, and live deployment.
 
 ### ROUND 3 — WebMCP Core Read Tools (Completed)
-- **WebMCP Runtime Layer:** Created `src/webmcp/runtime.ts` polyfilling `document.modelContext` / `navigator.modelContext` with tool registration, discovery, event emissions, and execution timing.
+- **WebMCP Runtime Layer:** Created `src/webmcp/runtime.ts` polyfilling `document.modelContext` / `navigator.modelContext` with tool registration, discovery, event emissions, and execution timing using official `@mcp-b/global@5.1.0`.
 - **Core Read Tools (`src/webmcp/tools.ts`):**
   1. `get_blast_radius({ module })`: Transitive BFS reach computation across all downstream callers, affected test collection, incident collation, composite risk indexing, and real-time graph impact zone highlighting.
   2. `check_regression_history({ pattern })`: Keyword/module/error pattern matcher surfacing past outages, severity, and root-cause commit attribution.
@@ -60,3 +60,22 @@
   - Form for running any custom parameter with instant syntax-highlighted JSON output preview and clipboard copy.
   - Real-time **Agent Activity Stream** with timestamps, tool names, inputs, output snippets, and execution latencies.
 - **Verified:** Unit tests passed across 4 module scenarios; production bundle built cleanly with 0 errors.
+
+### ROUND 4 — The Centerpiece: `simulate_change_impact` (Completed)
+- **WebMCP Tool Registration (`simulate_change_impact`):**
+  - Input Schema: `{ description: string, touched_modules: string[] }`
+  - Logic: Computes transitive downstream blast across all touched services, scans historical incidents for keyword/module regression precedents, aggregates affected test suites (failing/flaky), calculates predicted blast risk index (0.0–1.0), and assigns safety ratings (`CRITICAL RISK - HUMAN REVIEW REQUIRED`, `ELEVATED RISK - REVIEW RECOMMENDED`, `LOW RISK - SAFE FOR AUTOMATION`).
+- **Live On-Screen Visual Simulation Canvas:**
+  - Directly touched modules pulse with electric amber/yellow rings and `⚡ MODIFIED` badges.
+  - Downstream ripple services light up with crimson alert borders.
+  - Non-impacted services dim to 0.15 opacity.
+  - Graph edges connecting the blast zone accelerate to 3x directional particle speed with amber/red styling.
+- **Centerpiece UI Components:**
+  - `SimulationBanner.tsx`: Floating top glassmorphism banner displaying live simulation status, proposed change description, risk index meter, direct vs downstream service count, and 1-click exit button.
+  - `NodeDetailPanel.tsx` (Simulation Breakdown): Dedicated view displaying AI Safety Analysis Findings, directly modified vs ripple services, test suite coverage vulnerabilities, and outage warnings.
+  - `AgentDrawer.tsx`: Added 1-Click Centerpiece simulation triggers with custom parameter inputs.
+- **Verified in Real Chrome (`test_round4_chrome.mjs`):**
+  - Scenario 1 (Hero Node `auth-service` + `redis-session-cluster` token refactor): 85% Predicted Risk, 7 nodes impacted, 2 P0/P1 incidents matched, 3 flaky/failing tests, live DOM confirmed.
+  - Scenario 2 (DB Pool `db-client-pool` scaling): 70% Predicted Risk, 9 nodes impacted, 3 incidents matched, 1 failing test.
+  - Scenario 3 (Edge UI `partner-portal` regex): 20% Predicted Risk, 1 node impacted, 0 incidents, 0 failing tests.
+- **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
