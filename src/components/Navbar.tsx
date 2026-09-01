@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Sparkles, RefreshCw, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShieldAlert, Sparkles, RefreshCw, AlertTriangle, ShieldCheck, HelpCircle } from 'lucide-react';
 import { SystemDataset, LayerType } from '../types/dataset';
 import { webMCPRegistry } from '../webmcp/runtime';
 
@@ -9,6 +9,7 @@ interface NavbarProps {
   onSelectLayer: (layer: LayerType | 'all') => void;
   onResetView: () => void;
   onSelectHeroNode: () => void;
+  onOpenAboutModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectLayer,
   onResetView,
   onSelectHeroNode,
+  onOpenAboutModal,
 }) => {
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -91,10 +93,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           onClick={onSelectHeroNode}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-medium transition-all shadow-sm"
-          title="Inspect Hero Risky Node (auth-service)"
+          title="Inspect Hero Risky Node (auth-service) [Key: H]"
         >
           <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-          <span className="hidden sm:inline">Hero Node:</span>
+          <span className="hidden sm:inline">Hero:</span>
           <span className="font-mono font-bold">auth-service</span>
         </button>
 
@@ -114,11 +116,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Reset Camera Button */}
         <button
           onClick={onResetView}
-          className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all"
-          title="Reset Graph Zoom & Center"
+          className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-all cursor-pointer"
+          title="Reset Graph Zoom & Center [Key: R]"
         >
           <RefreshCw className="w-4 h-4" />
         </button>
+
+        {/* About & Shortcuts Modal Trigger */}
+        {onOpenAboutModal && (
+          <button
+            onClick={onOpenAboutModal}
+            className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 hover:text-indigo-200 transition-all cursor-pointer"
+            title="About TREMOR & Shortcuts [Key: ?]"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </header>
   );

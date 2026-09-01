@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { Radio } from 'lucide-react';
+import { Radio, Plus, Minus, Maximize2, Crosshair } from 'lucide-react';
 import { SystemDataset, SystemNode, LayerType, SimulationResult } from '../types/dataset';
-import { getRiskColor, getNodeDependencies } from '../utils/graphHelpers';
+import { getRiskColor, getNodeDependencies, getRiskLabel } from '../utils/graphHelpers';
 
 interface GraphCanvasProps {
   dataset: SystemDataset;
@@ -11,6 +11,7 @@ interface GraphCanvasProps {
   activeLayer: LayerType | 'all';
   impactedNodeIds?: string[];
   simulation?: SimulationResult | null;
+  onSelectHeroNode?: () => void;
 }
 
 export const GraphCanvas: React.FC<GraphCanvasProps> = ({
@@ -20,6 +21,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   activeLayer,
   impactedNodeIds = [],
   simulation = null,
+  onSelectHeroNode,
 }) => {
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -86,6 +88,21 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     }, 600);
     return () => clearTimeout(timer);
   }, []);
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    if (fgRef.current) fgRef.current.zoom(fgRef.current.zoom() * 1.3, 400);
+  };
+
+  const handleZoomOut = () => {
+    if (fgRef.current) fgRef.current.zoom(fgRef.current.zoom() / 1.3, 400);
+  };
+
+  const handleFitView = () => {
+    if (fgRef.current) {
+      fgRef.current.zoomToFit(400, 60);
+    }
+  };
 
   // Custom node canvas renderer
   const drawNode = useCallback(
@@ -278,7 +295,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   );
 
   return (
-    <div className="relative w-full h-full bg-slate-950 overflow-hidden select-none">
+    <div className="relative w-full h-full bg-[#070a12] overflow-hidden select-none">
+      {/* Background Cyber Grid */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }}
+      />
+
       {/* Loading Skeleton */}
       {isInitializing && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 backdrop-blur-sm">
@@ -291,6 +318,62 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           </p>
         </div>
       )}
+
+      {/* Floating Hover Tooltip Card */}
+      {hoveredNode && !selectedNode && (
+        <div className="absolute top-4 left-4 z-20 pointer-events-none p-3 rounded-xl bg-slate-900/95 border border-slate-700 shadow-2xl backdrop-blur-md space-y-1.5 animate-fadeIn max-w-xs">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-bold text-white text-xs truncate">{hoveredNode.label}</span>
+            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase border ${getRiskLabel(hoveredNode.risk_score).bg} ${getRiskLabel(hoveredNode.risk_score).text} ${getRiskLabel(hoveredNode.risk_score).border}`}>
+              {Math.round(hoveredNode.risk_score * 100)}% Risk
+            </span>
+          </div>
+          <div className="font-mono text-[10px] text-slate-400 flex items-center gap-1">
+            <span>ID: {hoveredNode.id}</span>
+            <span>•</span>
+            <span className="capitalize">{hoveredNode.layer}</span>
+          </div>
+          {hoveredNode.description && (
+            <p className="text-[11px] text-slate-300 line-clamp-2">{hoveredNode.description}</p>
+          )}
+        </div>
+      )}
+
+      {/* Floating Canvas Controls Overlay */}
+      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md text-xs">
+        <button
+          onClick={handleZoomIn}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+          title="Zoom In"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+          title="Zoom Out"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <div className="w-px h-4 bg-slate-700 mx-0.5" />
+        <button
+          onClick={handleFitView}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer"
+          title="Fit Graph to Screen"
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+        </button>
+        {onSelectHeroNode && (
+          <button
+            onClick={onSelectHeroNode}
+            className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-all cursor-pointer flex items-center gap-1"
+            title="Center on Hero Node (auth-service)"
+          >
+            <Crosshair className="w-3.5 h-3.5" />
+            <span className="font-mono text-[10px] hidden sm:inline">Hero</span>
+          </button>
+        )}
+      </div>
 
       {/* Force Graph */}
       <ForceGraph2D

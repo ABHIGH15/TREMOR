@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { SystemDataset, SystemNode, SimulationResult } from '../types/dataset';
 import { getRiskColor, getRiskLabel, getLayerColor, getNodeDependencies } from '../utils/graphHelpers';
+import { webMCPRegistry } from '../webmcp/runtime';
 
 interface NodeDetailPanelProps {
   node: SystemNode | null;
@@ -319,6 +320,38 @@ export const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
               }}
             />
           </div>
+        </div>
+
+        {/* Quick WebMCP Actions on Selected Node */}
+        <div className="grid grid-cols-2 gap-1.5 pt-2">
+          <button
+            onClick={() => {
+              webMCPRegistry.executeTool('simulate_change_impact', {
+                description: `Simulate proposed refactoring impact on ${node.label} (${node.id})`,
+                touched_modules: [node.id],
+              });
+            }}
+            className="p-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white font-medium text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+            title="Simulate blast radius for this node"
+          >
+            <Sparkles className="w-3 h-3" />
+            <span>Simulate Blast</span>
+          </button>
+
+          <button
+            onClick={() => {
+              webMCPRegistry.executeTool('flag_for_review', {
+                module: node.id,
+                risk_notes: `Manual safety flag created for ${node.label} (Calculated Risk: ${node.risk_score}). Human review requested.`,
+                proposed_action: `Review and verify architectural dependencies before modifying ${node.id}`,
+              });
+            }}
+            className="p-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-amber-300 hover:text-white font-medium text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
+            title="Flag this module for mandatory human confirmation"
+          >
+            <ShieldAlert className="w-3 h-3" />
+            <span>Flag for Review</span>
+          </button>
         </div>
       </div>
 
