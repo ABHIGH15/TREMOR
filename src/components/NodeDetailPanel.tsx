@@ -43,7 +43,7 @@ export const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
     const isElevated = simulation.safety_rating.includes('ELEVATED');
 
     return (
-      <aside className="w-full lg:w-96 bg-[#0b0f19]/95 border-l border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 z-20 animate-fadeIn">
+      <aside aria-label="Simulation Breakdown Report" className="absolute lg:relative right-0 top-0 bottom-0 w-full sm:w-96 lg:w-96 bg-[#0b0f19]/95 border-l border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 z-20 animate-fadeIn shadow-2xl">
         {/* Simulation Header */}
         <div className="p-5 border-b border-slate-800 sticky top-0 bg-[#0b0f19]/95 backdrop-blur-md z-10 space-y-3">
           <div className="flex items-start justify-between gap-2">
@@ -180,10 +180,10 @@ export const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
     );
   }
 
-  // Default empty state
+  // Default empty state (hidden on mobile to maximize canvas space)
   if (!node) {
     return (
-      <aside className="w-full lg:w-96 bg-[#0b0f19]/95 border-l border-slate-800 p-6 flex flex-col justify-between overflow-y-auto shrink-0 z-20">
+      <aside aria-label="Module Inspector" className="hidden lg:flex w-96 bg-[#0b0f19]/95 border-l border-slate-800 p-6 flex-col justify-between overflow-y-auto shrink-0 z-20">
         <div className="space-y-6">
           <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold uppercase tracking-wider">
             <Info className="w-4 h-4 text-indigo-400" />
@@ -265,7 +265,7 @@ export const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
   const nodeTests = dataset.tests.filter(t => t.module === node.id);
 
   return (
-    <aside className="w-full lg:w-96 bg-[#0b0f19]/95 border-l border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 z-20">
+    <aside aria-label={`Detail panel for ${node.label}`} className="absolute lg:relative right-0 top-0 bottom-0 w-full sm:w-96 lg:w-96 bg-[#0b0f19]/95 border-l border-slate-800 flex flex-col h-full overflow-y-auto shrink-0 z-20 shadow-2xl animate-fadeIn">
       {/* Header */}
       <div className="p-5 border-b border-slate-800 sticky top-0 bg-[#0b0f19]/95 backdrop-blur-md z-10 space-y-3">
         <div className="flex items-start justify-between gap-2">
