@@ -14,7 +14,7 @@
 | **ROUND 2** | Graph Visualization (`react-force-graph-2d`) | ✅ Complete | 2026-09-01 | Interactive 2D force graph, risk coloring, legend, layer filtering, full node detail sidebar |
 | **ROUND 3** | WebMCP Core Read Tools | ✅ Complete | 2026-09-01 | Registered `get_blast_radius`, `check_regression_history`, `get_change_provenance` on `document.modelContext` + Interactive Tool Runner + Activity Stream |
 | **ROUND 4** | Centerpiece: `simulate_change_impact` | ✅ Complete | 2026-09-01 | Registered `simulate_change_impact` tool on `document.modelContext`, built floating `SimulationBanner`, dynamic particle graph simulation, full sidebar breakdown, verified across 3 scenarios in real Chrome |
-| **ROUND 5** | Trust Layer: `flag_for_review` | ⏳ Pending | — | Pending review panel with human-only Confirm/Dismiss |
+| **ROUND 5** | Trust Layer: `flag_for_review` | ✅ Complete | 2026-09-01 | Registered `flag_for_review` WebMCP tool (strictly non-self-approving), built interactive Human Review Gate panel with physical Confirm/Dismiss buttons, human activity telemetry, and verified in real Chrome |
 | **ROUND 6** | `get_system_snapshot` & Regression Pass | ⏳ Pending | — | Full 6-tool suite validation |
 | **ROUND 7** | Visual & UX Polish Pass | ⏳ Pending | — | High-contrast theme, smooth animations, empty/loading states |
 | **ROUND 8** | Cross-Browser Live Testing | ⏳ Pending | — | ChatGPT in-app browser & Chrome WebMCP flag testing |
@@ -79,4 +79,19 @@
   - Scenario 2 (Order Processor `order-processor` async webhooks): **62% Risk** (`ELEVATED RISK - REVIEW RECOMMENDED`), 4 nodes impacted, amber banner ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario2-elevated.png)).
   - Scenario 3 (DB Pool `db-client-pool` scaling): **70% Risk** (`CRITICAL RISK - HUMAN REVIEW REQUIRED`), 9 nodes impacted, 3 incidents matched with P0 override ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario3-db-pool.png)).
   - Scenario 4 (Edge UI `partner-portal` regex): **15% Risk** (`LOW RISK - SAFE FOR AUTOMATION`), 1 node impacted, 0 incidents, 0 failing tests ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario4-low.png)).
+- **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
+
+### ROUND 5 — Trust Layer: `flag_for_review` (Completed)
+- **WebMCP Tool Registration (`flag_for_review`):**
+  - Input Schema: `{ module: string, risk_notes: string, proposed_action?: string }`
+  - Strict Safety Boundary: The tool creates a pending review item in the reactive state store; it has **zero capability to self-approve or auto-resolve**. Returns `status: "PENDING_HUMAN_REVIEW"`, `human_approval_status: "AWAITING_PHYSICAL_CLICK"`, `can_tool_self_approve: false`.
+- **Interactive Human Review Gate Panel (`AgentDrawer.tsx` & `Navbar.tsx`):**
+  - Live animated badge indicator (`Pending Review (N)`) in the top navigation bar and agent drawer.
+  - Dedicated Review Cards detailing Flag ID, Target Service, Calculated Risk score, Agent Risk Justification, and Proposed Actions.
+  - Physical human-only action buttons: **`Confirm / Approve`** (marks approved by Devin Patel) and **`Dismiss / Reject`**.
+  - Activity Stream audits human sign-offs as distinct `HUMAN_GATE` events with green badges and zero tool latency.
+- **Verified in Real Chrome (`test_round5_chrome.mjs` & Visual Screenshots in `verification/round5/`):**
+  - 1. Agent invocations create pending flags (`flag-pending-gate.png`).
+  - 2. Human engineer physical DOM button click transitions status to Confirmed (`flag-confirmed-human.png`).
+  - 3. Real-time activity log records human confirmation telemetry (`flag-activity-stream.png`).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
