@@ -74,8 +74,9 @@
   - `SimulationBanner.tsx`: Floating top glassmorphism banner displaying live simulation status, proposed change description, risk index meter, direct vs downstream service count, and 1-click exit button.
   - `NodeDetailPanel.tsx` (Simulation Breakdown): Dedicated view displaying AI Safety Analysis Findings, directly modified vs ripple services, test suite coverage vulnerabilities, and outage warnings.
   - `AgentDrawer.tsx`: Added 1-Click Centerpiece simulation triggers with custom parameter inputs.
-- **Verified in Real Chrome (`test_round4_chrome.mjs`):**
-  - Scenario 1 (Hero Node `auth-service` + `redis-session-cluster` token refactor): 85% Predicted Risk, 7 nodes impacted, 2 P0/P1 incidents matched, 3 flaky/failing tests, live DOM confirmed.
-  - Scenario 2 (DB Pool `db-client-pool` scaling): 70% Predicted Risk, 9 nodes impacted, 3 incidents matched, 1 failing test.
-  - Scenario 3 (Edge UI `partner-portal` regex): 20% Predicted Risk, 1 node impacted, 0 incidents, 0 failing tests.
+- **Verified in Real Chrome (`test_round4_chrome.mjs` & Visual Screenshots in `verification/round4/`):**
+  - Scenario 1 (Hero Node `auth-service` + `redis-session-cluster` token refactor): **79% Risk** (`CRITICAL RISK - HUMAN REVIEW REQUIRED`), 7 nodes impacted, 2 P0/P1 incidents matched, 3 flaky/failing tests ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario1-critical.png)).
+  - Scenario 2 (Order Processor `order-processor` async webhooks): **62% Risk** (`ELEVATED RISK - REVIEW RECOMMENDED`), 4 nodes impacted, amber banner ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario2-elevated.png)).
+  - Scenario 3 (DB Pool `db-client-pool` scaling): **70% Risk** (`CRITICAL RISK - HUMAN REVIEW REQUIRED`), 9 nodes impacted, 3 incidents matched with P0 override ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario3-db-pool.png)).
+  - Scenario 4 (Edge UI `partner-portal` regex): **15% Risk** (`LOW RISK - SAFE FOR AUTOMATION`), 1 node impacted, 0 incidents, 0 failing tests ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round4/scenario4-low.png)).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
