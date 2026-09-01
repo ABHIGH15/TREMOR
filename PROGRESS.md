@@ -111,8 +111,10 @@
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
 
 ### ROUND 7 — Visual & UX Polish Pass (Completed)
-- **High-Contrast Dark Aesthetic:** Built obsidian dark theme (`#070a12`) with subtle coordinate grid pattern, high-contrast risk colors, and custom physics simulation dampening.
-- **In-Canvas Floating Toolbar (`GraphCanvas.tsx`):**
+- **WCAG 2.1 AA Accessibility Pass:**
+  - Integrated high-contrast `:focus-visible` styling (`outline: 2px solid #38bdf8`, `box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.4)`) across all interactive buttons, layer filters, dropdowns, and drawer tabs.
+  - Added semantic `aria-label`, `role="dialog"`, `role="toolbar"`, and `aria-live="polite"` descriptors across all controls.
+- **In-Canvas Floating Toolbar & Hover Cards (`GraphCanvas.tsx`):**
   - Floating glassmorphism controls: Zoom In (`+`), Zoom Out (`-`), Fit-To-Screen (`Maximize2`), and Center on Hero Node (`Crosshair`).
   - Hover Tooltip Preview Card: Instant module ID, layer, risk percentage, and description pill on mouseover.
 - **Interactive "About & Architecture" Modal (`AboutModal.tsx`):**
@@ -121,7 +123,8 @@
 - **Sidebar 1-Click Action Triggers (`NodeDetailPanel.tsx`):**
   - Added direct **`⚡ Simulate Blast`** and **`🚨 Flag for Review`** action buttons under each inspected node's risk gauge.
 - **Verified in Real Chrome (`test_round7_polish.mjs` & Visual Screenshots in `verification/round7/`):**
-  - 1. Hero node selection with 1-click action buttons ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-hero-selection.png)).
-  - 2. About & Architecture modal opened via keyboard shortcut `?` ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-about-modal.png)).
-  - 3. Hover tooltip card rendered over cyber-grid canvas ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-canvas-grid-hover.png)).
+  - 1. Hero node selection with 1-click action buttons ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-hero-selection.png) - MD5: `0805982d0f997d07323c4667efe28b9f`).
+  - 2. About & Architecture modal opened via Help trigger ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-about-modal.png) - MD5: `b97ba77fb57c96096470d3598ecae5ad`).
+  - 3. Accessible keyboard focus ring during sequential tabbing ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-keyboard-focus.png) - MD5: `3a56e5bb7db436c6b79fc11466d004a0`).
+  - 4. Cyber-grid background & canvas hover card ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-canvas-grid-hover.png) - MD5: `6495ec3422164ae86e9b09e22969591d`).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
