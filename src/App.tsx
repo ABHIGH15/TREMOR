@@ -6,6 +6,7 @@ import { GraphCanvas } from './components/GraphCanvas';
 import { GraphLegend } from './components/GraphLegend';
 import { NodeDetailPanel } from './components/NodeDetailPanel';
 import { AgentDrawer } from './components/AgentDrawer';
+import { registerCoreReadTools } from './webmcp/tools';
 
 const dataset = rawDataset as SystemDataset;
 
@@ -13,24 +14,38 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState<SystemNode | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<LayerType | 'all'>('all');
   const [resetTrigger, setResetTrigger] = useState(0);
+  const [impactedNodeIds, setImpactedNodeIds] = useState<string[]>([]);
 
   // Hero node selection helper
   const handleSelectHeroNode = useCallback(() => {
     const hero = dataset.nodes.find(n => n.id === 'auth-service') || null;
     setSelectedLayer('all');
     setSelectedNode(hero);
+    setImpactedNodeIds([]);
   }, []);
 
   const handleResetView = useCallback(() => {
     setResetTrigger(prev => prev + 1);
+    setImpactedNodeIds([]);
   }, []);
 
+  const handleClearHighlights = useCallback(() => {
+    setImpactedNodeIds([]);
+  }, []);
+
+  // Register WebMCP Core Tools on mount
   useEffect(() => {
-    console.log('🚀 [TREMOR Cockpit] Graph visualization initialized with', {
-      nodes: dataset.nodes.length,
-      edges: dataset.edges.length,
-      heroNode: 'auth-service',
+    registerCoreReadTools(dataset, {
+      onHighlightImpactZone: (nodeIds, targetNode) => {
+        setImpactedNodeIds(nodeIds);
+        setSelectedNode(targetNode);
+      },
+      onSelectNode: node => {
+        setSelectedNode(node);
+      },
     });
+
+    console.log('🚀 [TREMOR Cockpit] WebMCP runtime & Core Read Tools initialized');
   }, []);
 
   return (
@@ -54,6 +69,7 @@ export default function App() {
             selectedLayer={selectedLayer}
             onSelectNode={setSelectedNode}
             resetTrigger={resetTrigger}
+            impactedNodeIds={impactedNodeIds}
           />
           {/* Floating Graph Legend */}
           <GraphLegend />
@@ -69,7 +85,7 @@ export default function App() {
       </div>
 
       {/* Bottom Drawer: WebMCP Agent Activity & Trust Layer */}
-      <AgentDrawer />
+      <AgentDrawer onClearHighlights={handleClearHighlights} />
     </div>
   );
 }
