@@ -50,6 +50,10 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({
     });
     const unsubFlags = webMCPRegistry.onFlagsChanged(flags => {
       setPendingFlags(flags);
+      if (flags.some(f => f.status === 'PENDING')) {
+        setActiveTab('pending');
+        setIsOpen(true);
+      }
     });
 
     return () => {
