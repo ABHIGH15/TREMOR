@@ -17,7 +17,7 @@
 | **ROUND 5** | Trust Layer: `flag_for_review` | ✅ Complete | 2026-09-01 | Registered `flag_for_review` WebMCP tool (strictly non-self-approving), built interactive Human Review Gate panel with physical Confirm/Dismiss buttons, human activity telemetry, and verified in real Chrome |
 | **ROUND 6** | `get_system_snapshot` & Regression Pass | ✅ Complete | 2026-09-01 | Registered `get_system_snapshot` (Tool 6/6), executed continuous E2E regression pass across all 6 tools in real Chrome with visual proof artifacts |
 | **ROUND 7** | Visual & UX Polish Pass | ✅ Complete | 2026-09-01 | Cyberpunk dark theme, in-canvas zoom/fit toolbar, hover cards, keyboard shortcuts (H, S, R, ?, ESC), About architecture modal, sidebar 1-click WebMCP action triggers |
-| **ROUND 8** | Cross-Browser & In-App Browser Testing | ✅ Complete | 2026-09-01 | Verified across Chrome WebMCP flag (1440x900), ChatGPT Mobile in-app browser (390x844), and ChatGPT Desktop split-view (1024x768) with 100% tool discovery and responsive overlay layout |
+| **ROUND 8** | Cross-Browser & Viewport Emulation | ✅ Complete | 2026-09-01 | Verified Chrome WebMCP flag (1440x900), simulated mobile in-app viewport (390x844), and simulated split-view (1024x768) with 100% tool discovery and responsive overlay layout |
 | **ROUND 9** | Documentation & Repo Finalization | ⏳ Pending | — | Full docs, license verification, code snippets |
 | **ROUND 10**| Demo Video & Submission | ⏳ Pending | — | <3 min demo video, Devpost submission |
 
@@ -129,9 +129,11 @@
   - 4. Cyber-grid background & canvas hover card ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round7/polish-canvas-grid-hover.png) - MD5: `6495ec3422164ae86e9b09e22969591d`).
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
 
-### ROUND 8 — Cross-Browser & In-App Browser Testing (Completed)
-- **Multi-Environment Compatibility Matrix:**
-  - **Environment 1: Chrome with Native WebMCP Flag (1440x900):** 100% of all 6 tools discovered via `navigator.modelContextTesting.listTools()`, simulation canvas and particle physics render at 60fps ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chrome-desktop.png) - MD5: `f5da8b6c28f293144e39d33db82b610a`).
-  - **Environment 2: ChatGPT Mobile In-App Browser (iPhone 14 Pro 390x844 with Touch & Mobile UA):** In-app mobile browser loads cleanly with slide-over drawer inspector, touch-friendly navbar controls, and WebMCP polyfill discovery ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chatgpt-mobile.png) - MD5: `d072df2d1dd3277579572d258d54d990`).
-  - **Environment 3: ChatGPT Desktop Split-View (1024x768):** Evaluated side-by-side agent chat window with active `flag_for_review` gate panel ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chatgpt-splitview.png) - MD5: `e4a599a0e9de42ba5a13115447d341ef`).
+### ROUND 8 — Cross-Browser & Viewport Emulation Testing (Completed)
+- **Multi-Environment & Viewport Compatibility Matrix:**
+  - **Environment 1: Chrome Desktop with Native WebMCP Flag (1440x900):** 100% of all 6 tools discovered via `navigator.modelContextTesting.listTools()`, simulation canvas and particle physics render at 60fps ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chrome-desktop.png) - MD5: `f5da8b6c28f293144e39d33db82b610a`).
+  - **Environment 2: Simulated Mobile In-App Viewport (iPhone 14 Pro 390x844 with Touch & Mobile UA in Chrome):** Verified responsive layout: empty state hidden on mobile to maximize canvas viewport; selected node slides in as an overlay drawer with close touch target; polyfill tool definitions verified ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chatgpt-mobile.png) - MD5: `d072df2d1dd3277579572d258d54d990`).
+  - **Environment 3: Simulated Tablet / Split-View Viewport (1024x768 with Desktop UA in Chrome):** Evaluated side-by-side viewport compatibility with active `flag_for_review` gate panel ([screenshot](https://raw.githubusercontent.com/ABHIGH15/TREMOR/main/verification/round8/crossbrowser-chatgpt-splitview.png) - MD5: `e4a599a0e9de42ba5a13115447d341ef`).
+- **ChatGPT In-App Browser Compatibility Fix:**
+  - *Identified & Resolved:* In ChatGPT's native in-app browser, `document.modelContext` enforces strict read-only property definitions. A prior debug assignment (`doc.modelContext.getTools = ...`) threw a runtime `TypeError` halting tool registration. Fixed by removing property mutations and exposing helper utilities safely on `window.__tremor_webMCP` while registering all 6 tools cleanly via canonical `document.modelContext.registerTool()`.
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
