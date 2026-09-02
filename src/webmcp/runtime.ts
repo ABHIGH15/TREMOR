@@ -60,39 +60,58 @@ class WebMCPRuntimeManager {
       initializeWebModelContext({ installTestingShim: true });
       console.log('✅ [WebMCP] Official @mcp-b/global initialized on document.modelContext & navigator.modelContext');
     } catch (err) {
-      console.warn('⚠️ [WebMCP] Official polyfill init notice:', err);
+      console.warn('⚠️ [WebMCP] Polyfill initialization notice:', err);
     }
 
-    // Ensure document.modelContext has getTools & executeTool helper methods exposed for DevTools/inspection
-    const doc = document as any;
-    if (doc) {
-      if (!doc.modelContext) {
-        doc.modelContext = {};
-      }
-      doc.modelContext.getTools = () => this.getTools();
-      doc.modelContext.executeTool = (name: string, input: any) => this.executeTool(name, input);
+    // Expose runtime helpers on global window object safely (never mutating read-only document.modelContext)
+    try {
+      (window as any).__tremor_webMCP = this;
+      (window as any).tremorWebMCP = {
+        getTools: () => this.getTools(),
+        executeTool: (name: string, input: any) => this.executeTool(name, input),
+      };
+    } catch (err) {
+      // Safe fallback
     }
   }
 
   public async registerTool(tool: WebMCPToolDefinition): Promise<void> {
     this.registeredTools.set(tool.name, tool);
 
-    // Register on document.modelContext
-    const doc = (typeof document !== 'undefined' ? (document as any) : null);
-    if (doc?.modelContext?.registerTool) {
-      try {
-        await doc.modelContext.registerTool({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-          execute: async (input: any) => {
-            return this.executeTool(tool.name, input);
-          },
-        });
-        console.log(`🛠️ [WebMCP Standard] Registered tool '${tool.name}' on document.modelContext`);
-      } catch (err) {
-        console.warn(`[WebMCP Standard] Tool register notice for '${tool.name}':`, err);
+    const toolPayload = {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      execute: async (input: any) => {
+        return this.executeTool(tool.name, input);
+      },
+    };
+
+    // 1. Register on document.modelContext (Canonical W3C / @mcp-b/global standard)
+    try {
+      const doc = typeof document !== 'undefined' ? (document as any) : null;
+      if (doc?.modelContext?.registerTool && typeof doc.modelContext.registerTool === 'function') {
+        await doc.modelContext.registerTool(toolPayload);
+        console.log(`🛠️ [WebMCP Standard] Registered '${tool.name}' on document.modelContext`);
       }
+    } catch (err) {
+      console.warn(`[WebMCP Standard] Register notice for '${tool.name}' on document.modelContext:`, err);
+    }
+
+    // 2. Register on navigator.modelContext if separate
+    try {
+      const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+      const doc = typeof document !== 'undefined' ? (document as any) : null;
+      if (
+        nav?.modelContext?.registerTool &&
+        typeof nav.modelContext.registerTool === 'function' &&
+        nav.modelContext !== doc?.modelContext
+      ) {
+        await nav.modelContext.registerTool(toolPayload);
+        console.log(`🛠️ [WebMCP Standard] Registered '${tool.name}' on navigator.modelContext`);
+      }
+    } catch (err) {
+      console.warn(`[WebMCP Standard] Register notice for '${tool.name}' on navigator.modelContext:`, err);
     }
 
     this.notifyToolListeners();
@@ -100,14 +119,30 @@ class WebMCPRuntimeManager {
 
   public async unregisterTool(name: string): Promise<void> {
     this.registeredTools.delete(name);
-    const doc = (typeof document !== 'undefined' ? (document as any) : null);
-    if (doc?.modelContext?.unregisterTool) {
-      try {
+
+    try {
+      const doc = typeof document !== 'undefined' ? (document as any) : null;
+      if (doc?.modelContext?.unregisterTool && typeof doc.modelContext.unregisterTool === 'function') {
         await doc.modelContext.unregisterTool(name);
-      } catch (err) {
-        // ignore
       }
+    } catch (err) {
+      // ignore
     }
+
+    try {
+      const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+      const doc = typeof document !== 'undefined' ? (document as any) : null;
+      if (
+        nav?.modelContext?.unregisterTool &&
+        typeof nav.modelContext.unregisterTool === 'function' &&
+        nav.modelContext !== doc?.modelContext
+      ) {
+        await nav.modelContext.unregisterTool(name);
+      }
+    } catch (err) {
+      // ignore
+    }
+
     this.notifyToolListeners();
   }
 
