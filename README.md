@@ -78,6 +78,62 @@ TREMOR registers 6 structured WebMCP tools directly onto `document.modelContext`
 | **5** | `simulate_change_impact` | **Centerpiece Tool**: Simulates refactors, computes risk index (0–1.0) | `description`, `touched_modules` | Lights up pulsing amber rings and top banner |
 | **6** | `flag_for_review` | **Trust Layer**: Registers a pending review flag solvable ONLY by human click | `module`, `risk_notes`, `proposed_action?` | Creates pending flag with pulsing navbar badge |
 
+### Canonical WebMCP Registration Example (`document.modelContext.registerTool`)
+
+Every tool in TREMOR is registered directly onto `document.modelContext` adhering to the W3C WebMCP specification using the `@mcp-b/global` standard polyfill:
+
+```typescript
+// Actual registration code from src/webmcp/tools.ts
+await document.modelContext.registerTool({
+  name: 'get_blast_radius',
+  description: 'Returns everything downstream of a module: dependent modules, affected tests, and past incidents tied to it. Also triggers the on-screen graph to visually highlight the impact zone.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      module: {
+        type: 'string',
+        description: 'The ID of the module or service to inspect (e.g. "auth-service", "checkout-service", "db-client-pool")',
+      },
+    },
+    required: ['module'],
+  },
+  execute: async ({ module }: { module: string }) => {
+    const targetNode = nodeMap.get(module);
+    if (!targetNode) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: `Module '${module}' not found.` }],
+      };
+    }
+
+    // 1. Transitive BFS traversal
+    const downstreamIds = computeDownstreamTransitive(module, dataset);
+    const allImpactedIds = [module, ...downstreamIds];
+
+    // 2. Collate affected tests & historical incidents
+    const affectedTests = dataset.tests.filter(t => allImpactedIds.includes(t.module));
+    const relatedIncidents = dataset.incidents.filter(i => allImpactedIds.includes(i.module));
+
+    // 3. Live UI Visual Side-Effect: highlight impact zone on canvas
+    callbacks.onHighlightImpactZone?.(allImpactedIds, targetNode);
+
+    // 4. Return standard MCP content payload
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          target_module: module,
+          downstream_dependents: downstreamIds,
+          total_impacted_modules: allImpactedIds.length,
+          affected_tests: affectedTests,
+          historical_incidents: relatedIncidents,
+        }, null, 2),
+      }],
+    };
+  },
+});
+```
+
 ---
 
 ## ⚡ The Centerpiece: `simulate_change_impact`
