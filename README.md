@@ -9,6 +9,8 @@
 [![GitHub](https://img.shields.io/badge/GitHub-ABHIGH15%2FTREMOR-blue?style=for-the-badge&logo=github)](https://github.com/ABHIGH15/TREMOR)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](./LICENSE)
 
+> *Note: TREMOR is an independent agentic safety cockpit built for the WebMCP Challenge 2026. It is not affiliated with the `@tremor/react` UI component library or `tremor-runtime`.*
+
 ---
 
 ## 📖 Table of Contents
