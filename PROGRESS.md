@@ -19,7 +19,7 @@
 | **ROUND 7** | Visual & UX Polish Pass | ✅ Complete | 2026-09-01 | Cyberpunk dark theme, in-canvas zoom/fit toolbar, hover cards, keyboard shortcuts (H, S, R, ?, ESC), About architecture modal, sidebar 1-click WebMCP action triggers |
 | **ROUND 8** | Cross-Browser & Viewport Emulation | ✅ Complete | 2026-09-01 | Verified Chrome WebMCP flag (1440x900), simulated mobile in-app viewport (390x844), and simulated split-view (1024x768) with 100% tool discovery and responsive overlay layout |
 | **ROUND 9** | Documentation & Repo Finalization | ✅ Complete | 2026-09-02 | Production-grade `README.md`, verified `PROGRESS.md` with verbatim ChatGPT transcript, MIT `LICENSE`, clean build |
-| **ROUND 10**| Demo Video & Submission | ⏳ Pending | — | <3 min demo video, Devpost submission |
+| **ROUND 10**| Demo Video & Submission | ✅ Complete | 2026-09-02 | Timed 2:30 demo script (`DEMO_SCRIPT.md`), full Devpost submission package (`SUBMISSION.md`) |
 
 ---
 
@@ -180,6 +180,7 @@
   - Project Problem: AI Agent Myopia (why single-file LLMs cause systemic outages).
   - System Solution: Live 2D Force-Directed Cockpit + WebMCP runtime integration.
   - Complete 6-Tool Architecture Suite with input/output schemas and live UI side-effects.
+  - Canonical `document.modelContext.registerTool` code example added directly from source.
   - Centerpiece walkthrough of `simulate_change_impact`.
   - Trust Layer & Multi-Layer Human-in-the-Loop boundary specifications.
   - Real verbatim ChatGPT native in-app browser test transcript.
@@ -190,4 +191,13 @@
 - **Repository Integrity:**
   - `LICENSE`: Verified MIT Open Source.
   - Build Check: Production build compiles in 1.4s with zero errors.
+- **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
+
+### ROUND 10 — Demo Video & Submission Package (Completed)
+- **Demo Video Script (`DEMO_SCRIPT.md`):**
+  - Timed 2-minute 30-second 4-act presenter script tailored for < 3-minute hackathon criteria.
+  - Covers Problem (AI Agent Myopia), Cockpit & 6 WebMCP Tools, Live Centerpiece Simulation, and Trust Layer / ChatGPT In-App Browser Verification.
+  - Includes step-by-step recording checklist with exact screen interactions.
+- **Full Devpost Submission Package (`SUBMISSION.md`):**
+  - Complete answers to all Devpost submission prompts: Elevator Pitch, Inspiration, What It Does, How We Built It, Challenges & Fixes, Proudest Accomplishments, What We Learned, What's Next.
 - **Live Deployment:** Live and verified at [https://tremor-cockpit.vercel.app](https://tremor-cockpit.vercel.app).
