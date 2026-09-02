@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const TARGET_URL = 'https://tremor-cockpit.vercel.app';
-const OUT_DIR = resolve('./verification/round8');
+const OUT_DIR = resolve('./verification/cross-browser');
 
 if (!existsSync(OUT_DIR)) {
   mkdirSync(OUT_DIR, { recursive: true });
