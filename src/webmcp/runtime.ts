@@ -80,6 +80,13 @@ class WebMCPRuntimeManager {
   }
 
   public async registerTool(tool: WebMCPToolDefinition): Promise<void> {
+    // Abort existing controller if tool is being updated/re-registered
+    const existingController = this.toolAbortControllers.get(tool.name);
+    if (existingController) {
+      existingController.abort();
+      this.toolAbortControllers.delete(tool.name);
+    }
+
     this.registeredTools.set(tool.name, tool);
     if (tool.name === 'simulate_change_impact') {
       this.savedSimulateTool = tool;

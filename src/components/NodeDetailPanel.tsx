@@ -205,44 +205,57 @@ export const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({
               Quick Deep-Dive
             </div>
             
-            <button
-              onClick={onSelectHeroNode}
-              className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between text-xs text-red-400 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <Flame className="w-4 h-4" /> Hero Risky Node
-                </span>
-                <span className="font-mono bg-red-500/20 px-1.5 py-0.5 rounded">0.88 Risk</span>
-              </div>
-              <div className="text-sm font-semibold text-white mt-1 group-hover:text-red-200">
-                Auth & Session Service
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                4 AI commits • 2 past incidents • 2 flaky/failing tests
-              </div>
-            </button>
+            {/* Top Risk / Central Node */}
+            {dataset.nodes.length > 0 && (() => {
+              const heroNode = dataset.nodes.find(n => n.id === 'auth-service') || dataset.nodes[0];
+              return (
+                <button
+                  onClick={onSelectHeroNode}
+                  className="w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-left transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between text-xs text-red-400 font-bold">
+                    <span className="flex items-center gap-1.5">
+                      <Flame className="w-4 h-4" /> {heroNode.id === 'auth-service' ? 'Hero Risky Node' : 'Most Central Module'}
+                    </span>
+                    <span className="font-mono bg-red-500/20 px-1.5 py-0.5 rounded">
+                      {heroNode.risk_score.toFixed(2)} Risk
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold text-white mt-1 group-hover:text-red-200 truncate font-mono">
+                    {heroNode.label}
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
+                    {heroNode.description || `${heroNode.id} • Core architectural dependency`}
+                  </div>
+                </button>
+              );
+            })()}
 
-            <button
-              onClick={() => {
-                const checkout = dataset.nodes.find(n => n.id === 'checkout-service');
-                if (checkout) onSelectNode(checkout);
-              }}
-              className="w-full p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
-                <span className="flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" /> Critical Dependent
-                </span>
-                <span className="font-mono bg-amber-500/20 px-1.5 py-0.5 rounded">0.75 Risk</span>
-              </div>
-              <div className="text-sm font-semibold text-white mt-1 group-hover:text-amber-200">
-                Checkout & Billing Service
-              </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                Directly depends on Auth Service • 1 P0 outage history
-              </div>
-            </button>
+            {/* Second Most Impactful / Dependent Node */}
+            {dataset.nodes.length > 1 && (
+              <button
+                onClick={() => {
+                  const target = dataset.nodes.find(n => n.id === 'checkout-service') || dataset.nodes[1];
+                  if (target) onSelectNode(target);
+                }}
+                className="w-full p-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center justify-between text-xs text-amber-400 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4" /> {dataset.nodes.find(n => n.id === 'checkout-service') ? 'Critical Dependent' : 'Key Architecture Node'}
+                  </span>
+                  <span className="font-mono bg-amber-500/20 px-1.5 py-0.5 rounded">
+                    {(dataset.nodes.find(n => n.id === 'checkout-service')?.risk_score || dataset.nodes[1].risk_score).toFixed(2)} Risk
+                  </span>
+                </div>
+                <div className="text-sm font-semibold text-white mt-1 group-hover:text-amber-200 truncate font-mono">
+                  {(dataset.nodes.find(n => n.id === 'checkout-service') || dataset.nodes[1]).label}
+                </div>
+                <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
+                  {(dataset.nodes.find(n => n.id === 'checkout-service') || dataset.nodes[1]).description || 'High-impact dependent module in topology'}
+                </div>
+              </button>
+            )}
           </div>
         </div>
 

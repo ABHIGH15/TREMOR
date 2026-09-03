@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import rawDataset from './data/dataset.json';
 import { SystemDataset, SystemNode, LayerType, SimulationResult } from './types/dataset';
+import { fetchLiveRepoDataset, IngestionResult } from './services/githubIngestion';
 import { Navbar } from './components/Navbar';
 import { GraphCanvas } from './components/GraphCanvas';
 import { GraphLegend } from './components/GraphLegend';
@@ -10,8 +11,6 @@ import { SimulationBanner } from './components/SimulationBanner';
 import { AboutModal } from './components/AboutModal';
 import { registerCoreTools } from './webmcp/tools';
 import { webMCPRegistry } from './webmcp/runtime';
-
-const dataset = rawDataset as SystemDataset;
 
 export default function App() {
   const [selectedNode, setSelectedNode] = useState<SystemNode | null>(null);
@@ -25,10 +24,50 @@ export default function App() {
     nodes: string[];
   } | null>(null);
 
+  // Live Repo Ingestion State
+  const [mode, setMode] = useState<'demo' | 'live_repo'>('demo');
+  const [currentRepo, setCurrentRepo] = useState<string>('ABHIGH15/TREMOR');
+  const [isLoadingRepo, setIsLoadingRepo] = useState<boolean>(false);
+  const [liveIngestionResult, setLiveIngestionResult] = useState<IngestionResult | null>(null);
+
+  // Dynamic Active Dataset based on mode
+  const activeDataset: SystemDataset =
+    mode === 'demo'
+      ? (rawDataset as SystemDataset)
+      : (liveIngestionResult?.dataset || (rawDataset as SystemDataset));
+
+  // Handler to load a live GitHub repository
+  const handleLoadRepo = useCallback(async (repo: string) => {
+    setIsLoadingRepo(true);
+    setCurrentRepo(repo);
+    try {
+      const res = await fetchLiveRepoDataset(repo);
+      setLiveIngestionResult(res);
+      setSelectedNode(null);
+      setImpactedNodeIds([]);
+      setSimulation(null);
+    } finally {
+      setIsLoadingRepo(false);
+    }
+  }, []);
+
+  // Handler to toggle between Demo Scenario and Live Repo Mode
+  const handleToggleMode = useCallback(async (newMode: 'demo' | 'live_repo') => {
+    setMode(newMode);
+    setSelectedNode(null);
+    setImpactedNodeIds([]);
+    setSimulation(null);
+    setSelectedLayer('all');
+
+    if (newMode === 'live_repo' && !liveIngestionResult) {
+      await handleLoadRepo(currentRepo);
+    }
+  }, [liveIngestionResult, currentRepo, handleLoadRepo]);
+
   // Counterfactual Replay Listener: triggered on human sign-off
   useEffect(() => {
     return webMCPRegistry.onFlagConfirmed((flag) => {
-      const inc = dataset.incidents.find(i => i.module === flag.module) || dataset.incidents[0];
+      const inc = activeDataset.incidents.find(i => i.module === flag.module) || activeDataset.incidents[0];
       const avertedNodes = ['auth-service', 'redis-session-cluster', 'checkout-service', 'api-gateway'];
 
       setCounterfactualReplay({
@@ -44,16 +83,18 @@ export default function App() {
       }, 5000);
       return () => clearTimeout(timer);
     });
-  }, []);
+  }, [activeDataset]);
 
-  // Hero node selection helper
+  // Hero / Central node selection helper
   const handleSelectHeroNode = useCallback(() => {
-    const hero = dataset.nodes.find(n => n.id === 'auth-service') || null;
+    const hero = mode === 'demo'
+      ? (activeDataset.nodes.find(n => n.id === 'auth-service') || activeDataset.nodes[0] || null)
+      : (activeDataset.nodes[0] || null);
     setSelectedLayer('all');
     setSelectedNode(hero);
     setImpactedNodeIds([]);
     setSimulation(null);
-  }, []);
+  }, [activeDataset, mode]);
 
   const handleResetView = useCallback(() => {
     setImpactedNodeIds([]);
@@ -66,9 +107,9 @@ export default function App() {
     setSimulation(null);
   }, []);
 
-  // Register WebMCP Core Tools on mount
+  // Register WebMCP Core Tools on mount and whenever active dataset changes
   useEffect(() => {
-    registerCoreTools(dataset, {
+    registerCoreTools(activeDataset, {
       onHighlightImpactZone: (nodeIds, targetNode) => {
         setImpactedNodeIds(nodeIds);
         if (targetNode) setSelectedNode(targetNode);
@@ -83,8 +124,8 @@ export default function App() {
       },
     });
 
-    console.log('🚀 [TREMOR Cockpit] WebMCP runtime & Core Tools initialized');
-  }, []);
+    console.log(`🚀 [TREMOR Cockpit] WebMCP runtime synced (Mode: ${mode}, Nodes: ${activeDataset.nodes.length}, Edges: ${activeDataset.edges.length})`);
+  }, [activeDataset, mode]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -102,11 +143,18 @@ export default function App() {
         handleResetView();
       } else if (e.key === 's' || e.key === 'S') {
         e.preventDefault();
-        // Execute Centerpiece simulation
-        webMCPRegistry.executeTool('simulate_change_impact', {
-          description: 'Refactor JWT claims validation and sliding session cache timeout in Redis cluster',
-          touched_modules: ['auth-service', 'redis-session-cluster'],
-        });
+        if (mode === 'demo') {
+          webMCPRegistry.executeTool('simulate_change_impact', {
+            description: 'Refactor JWT claims validation and sliding session cache timeout in Redis cluster',
+            touched_modules: ['auth-service', 'redis-session-cluster'],
+          });
+        } else if (activeDataset.nodes.length > 0) {
+          const topNode = activeDataset.nodes[0];
+          webMCPRegistry.executeTool('simulate_change_impact', {
+            description: `Simulate refactoring blast radius for central module ${topNode.id}`,
+            touched_modules: [topNode.id],
+          });
+        }
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setIsAboutModalOpen(false);
@@ -119,19 +167,39 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSelectHeroNode, handleResetView, handleClearHighlights]);
+  }, [handleSelectHeroNode, handleResetView, handleClearHighlights, mode, activeDataset]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#070a12] text-slate-100 overflow-hidden select-none font-sans">
       {/* Top Navigation */}
       <Navbar
-        dataset={dataset}
+        dataset={activeDataset}
         selectedLayer={selectedLayer}
         onSelectLayer={setSelectedLayer}
         onResetView={handleResetView}
         onSelectHeroNode={handleSelectHeroNode}
         onOpenAboutModal={() => setIsAboutModalOpen(true)}
+        mode={mode}
+        onToggleMode={handleToggleMode}
+        currentRepo={currentRepo}
+        onLoadRepo={handleLoadRepo}
+        isLoadingRepo={isLoadingRepo}
       />
+
+      {/* Live Ingestion Informative Status Banner */}
+      {mode === 'live_repo' && (
+        <div className="bg-cyan-950/90 border-b border-cyan-500/30 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-cyan-200 z-20 shrink-0 gap-1.5 shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+            <span>
+              <strong>Live Ingestion Mode:</strong> Parsed real <code>import</code> dependency graph for <strong className="text-white">{currentRepo}</strong> ({liveIngestionResult?.parsedFilesCount || 15} central files of {liveIngestionResult?.totalSourceFiles || 17} source files).
+            </span>
+          </div>
+          <span className="text-cyan-400 font-mono text-[11px] shrink-0">
+            {liveIngestionResult?.statusMessage || 'Analyzing repository AST...'}
+          </span>
+        </div>
+      )}
 
       {/* Main Workspace: Graph Canvas + Right Sidebar */}
       <div className="flex-1 flex flex-col lg:flex-row relative overflow-hidden">
@@ -161,7 +229,7 @@ export default function App() {
           )}
 
           <GraphCanvas
-            dataset={dataset}
+            dataset={activeDataset}
             selectedNode={selectedNode}
             activeLayer={selectedLayer}
             onSelectNode={setSelectedNode}
@@ -176,7 +244,7 @@ export default function App() {
         {/* Right Sidebar: Selected Node Detail Panel & Simulation Breakdown */}
         <NodeDetailPanel
           node={selectedNode}
-          dataset={dataset}
+          dataset={activeDataset}
           onSelectNode={setSelectedNode}
           onSelectHeroNode={handleSelectHeroNode}
           simulation={simulation}
