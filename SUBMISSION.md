@@ -64,6 +64,9 @@ Before WebMCP, autonomous coding agents suffered from **"Architectural Myopia"**
   4. `get_change_provenance`: Live GitHub API commit telemetry combined with AI vs Human authorship auditing.
   5. `simulate_change_impact`: Centerpiece simulator computing composite predicted risk index (0.0–1.0) and driving real-time canvas particle acceleration.
   6. `flag_for_review`: Non-self-approving Trust Layer gate generating pending review cards in the UI.
+- **Dual-Engine Architecture (Demo Scenario vs. Live GitHub Ingestion):**
+  - **Mode 1: Enterprise Demo Scenario (Default):** Curated 18-microservice topology featuring the complex `auth-service` $\to$ `redis-session-cluster` P1 outage scenario, flaky test suites, dynamic tool lifecycle unregistration, and human confirmation gate with counterfactual replay.
+  - **Mode 2: Live GitHub Repository Ingestion:** Ingests any public GitHub repository (e.g. `ABHIGH15/TREMOR`). Fetches the repository tree, retrieves source files via CDN, and regex-extracts genuine `import ... from` and `require(...)` statements to construct real file-to-file dependency edges. Calculates architectural risk from real graph centrality and ingests live commit provenance—entirely client-side without any backend server.
 - **Frontend & Physics:** React 18, TypeScript, Tailwind CSS, and `react-force-graph-2d` for 60fps canvas physics.
 - **Native ChatGPT In-App Browser Verification:** Verified live inside the official native ChatGPT app, with full tool discovery, autonomous simulation execution, and accurate 0.79 Critical Risk reporting.
 

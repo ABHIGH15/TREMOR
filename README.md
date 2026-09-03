@@ -38,6 +38,20 @@ When an AI agent connects via WebMCP (`document.modelContext`), the application 
 
 ---
 
+## Dual-Engine Architecture
+
+TREMOR features two distinct operational modes:
+
+1. **🏢 Enterprise Demo Scenario (Default):**
+   - Curated 18-microservice enterprise topology featuring the complex `auth-service` $\to$ `redis-session-cluster` P1 outage scenario, flaky test suites, dynamic tool unregistration, and a human confirmation gate with counterfactual incident replay.
+
+2. **🌐 Live GitHub Repository Ingestion:**
+   - Ingests any public GitHub repository (default: `ABHIGH15/TREMOR`).
+   - The browser fetches the repository file tree, retrieves source files via CDN, and regex-extracts genuine `import ... from` and `require(...)` statements to construct real file-to-file dependency edges.
+   - Dynamically calculates graph centrality risk scores and streams live commit provenance—entirely client-side without any backend server.
+
+---
+
 ## The 6-Tool WebMCP Architecture Suite
 
 TREMOR registers six tools directly onto `document.modelContext` using the `@mcp-b/global` polyfill:
