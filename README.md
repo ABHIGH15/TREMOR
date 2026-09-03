@@ -13,7 +13,7 @@
 
 ---
 
-![TREMOR Cockpit](./verification/simulation-scenarios/scenario1-critical.png)
+![TREMOR Cockpit Hero](./verification/tremor_thumbnail.jpg)
 
 ---
 

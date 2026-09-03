@@ -25,4 +25,3 @@ dist-ssr
 .vercel
 .env*
 internal_docs/
-demo_mock/
