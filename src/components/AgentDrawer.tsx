@@ -486,7 +486,7 @@ export const AgentDrawer: React.FC<AgentDrawerProps> = ({
                     Human Review Gate (Trust Layer)
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    AI agents can declare intent and flag high-risk operations, but <strong>cannot self-approve</strong>. A human engineer must physically confirm or dismiss each flag.
+                    AI agents can declare intent and flag high-risk operations, but <strong>cannot self-approve</strong>. An authorized engineer must confirm or dismiss each flag.
                   </p>
                 </div>
                 <div className="text-xs font-mono text-slate-400">
