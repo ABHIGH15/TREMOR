@@ -19,17 +19,18 @@
 
 ### [0:00 – 0:35] Act 1: The Hook & The Problem
 > **[Voiceover]:**  
-> "Autonomous AI coding agents like Claude Code, Cursor, and ChatGPT are writing more production code than ever before. But they have a dangerous blind spot: **Architectural Myopia**.  
-> When an AI agent edits a single file—say, refactoring a session timeout in an auth service—it only sees that isolated file. It has no idea that 7 downstream microservices rely on that token format. At scale, that innocent 2-line change triggers a Redis cache stampede and crashes production checkout.  
+> "Autonomous AI coding agents like Claude Code, Cursor, and ChatGPT are writing more production code than ever before. But they operate with a dangerous blind spot: **Architectural Myopia**.  
+> When an AI agent refactors a single backend service—say, changing a token session timeout in an auth service—it only sees that isolated file. It has no idea that seven downstream microservices rely on that token format. At scale, that innocent two-line change triggers a Redis cache stampede and crashes the checkout pipeline.  
+> Today, existing backend MCP tools hand agents blast-radius data as raw text in a terminal. But terminal text is invisible to humans and creates zero shared understanding.  
 > This is why we built **TREMOR**."
 
 ---
 
-### [0:35 – 1:15] Act 2: The Cockpit & The WebMCP Standard
+### [0:35 – 1:15] Act 2: The Cockpit & The WebMCP Difference
 > **[Voiceover]:**  
-> *"TREMOR is a real-time web cockpit and WebMCP tool suite that gives AI agents and human engineers the exact same systemic picture of distributed dependencies before code ships.  
-> Here in the cockpit, we see our entire 18-microservice topology running on an interactive 2D force-directed physics engine. Nodes are dynamically color-coded by calculated risk index—from safe green to critical red.  
-> Using the official `@mcp-b/global` polyfill created by hackathon judge Alex Nahas, TREMOR registers **6 canonical WebMCP tools** directly onto `document.modelContext`. When an AI agent connects, this webpage becomes an interactive safety toolkit."*
+> *"TREMOR is browser-native: a human engineer and their agent look at the exact same live impact graph in the exact same tab.  
+> Here in the cockpit, our entire 18-microservice topology runs on an interactive 2D physics engine, dynamically color-coded by calculated risk index—from safe green to critical red.  
+> Using the official `@mcp-b/global` polyfill created by hackathon judge Alex Nahas, TREMOR registers **six canonical WebMCP tools** directly onto `document.modelContext`. When an AI agent connects, this webpage becomes an interactive safety toolkit."*
 
 ---
 

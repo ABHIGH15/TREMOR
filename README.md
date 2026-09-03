@@ -29,7 +29,7 @@ Autonomous coding agents (Claude Code, Cursor, Codex, ChatGPT) excel at editing 
 
 ## The Solution: TREMOR Cockpit
 
-TREMOR is an interactive, browser-based cockpit that gives coding agents and human engineers the same real-time view of system topology, transitive blast radius, and historical outage precedents before code changes ship.
+Existing backend MCP tools hand agents blast-radius data as raw text in a terminal. TREMOR is browser-native — a human and their agent look at the same live impact graph in the same tab, and nothing risky ships without a human clicking Confirm.
 
 When an AI agent connects via WebMCP (`document.modelContext`), the application exposes structured tools:
 - The agent queries topology and runs pre-execution blast simulations via multi-root BFS traversal.
