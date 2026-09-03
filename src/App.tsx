@@ -196,7 +196,7 @@ export default function App() {
             </span>
           </div>
           <span className="text-cyan-400 font-mono text-[11px] shrink-0">
-            {liveIngestionResult?.statusMessage || 'Analyzing repository AST...'}
+            {liveIngestionResult?.statusMessage || 'Analyzing repository imports...'}
           </span>
         </div>
       )}
@@ -238,7 +238,7 @@ export default function App() {
             onSelectHeroNode={handleSelectHeroNode}
           />
           {/* Floating Graph Legend */}
-          <GraphLegend />
+          <GraphLegend nodeCount={activeDataset.nodes.length} />
         </main>
 
         {/* Right Sidebar: Selected Node Detail Panel & Simulation Breakdown */}

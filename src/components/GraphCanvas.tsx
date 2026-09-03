@@ -81,13 +81,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     }
   }, [selectedNode, simulation, graphData.nodes, dataset.nodes]);
 
-  // Set timeout to clear loading skeleton
+  // Set timeout to clear loading skeleton and auto-fit graph
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitializing(false);
-    }, 600);
+      if (fgRef.current) {
+        fgRef.current.zoomToFit(600, 80);
+      }
+    }, 800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dataset.nodes.length]);
 
   // Zoom controls
   const handleZoomIn = () => {

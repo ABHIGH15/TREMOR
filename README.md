@@ -187,9 +187,14 @@ node scripts/regression-suite.mjs
 
 ## Known Limitations & What's Next
 
-TREMOR ships today with a curated, high-fidelity microservice topology and historical regression dataset representing an enterprise platform, alongside live GitHub commit telemetry for change provenance.
+TREMOR ships today with a dual-engine architecture: a curated enterprise demo scenario with historical incidents and flaky test suites, alongside live GitHub repository ingestion that extracts real file-to-file dependency edges via client-side regex parsing.
 
-To keep this initial release focused squarely on the WebMCP interaction model and in-browser human confirmation loop, full repository AST extraction was intentionally scoped out of the client. The immediate next step is integrating Tree-sitter-based static analysis and OpenTelemetry distributed trace ingestion, allowing TREMOR to dynamically map arbitrary codebases and production services in real time.
+To maintain a zero-backend, browser-native runtime within hackathon constraints, several technical trade-offs were made:
+
+1. **Regex-Based Import Extraction vs. Full AST Parsing:** Current live ingestion uses regex-based pattern matching to resolve ES module `import ... from` and CommonJS `require(...)` paths. While fast and zero-install, it does not construct a full compiler Abstract Syntax Tree (AST) or resolve complex dynamic runtime imports. The roadmap includes compiling Tree-sitter to WebAssembly for static-analysis-grade parsing directly in the browser thread.
+2. **File-Level vs. Symbol-Level Granularity:** Edges currently represent module-level dependencies rather than granular function-to-function call graphs or TypeScript type exports.
+3. **Language Scope:** Live import extraction is currently optimized for JavaScript and TypeScript projects with relative module paths. Full path resolution for Python virtual environments, Go workspace modules, and Rust crates is planned for future releases.
+4. **Static Topology vs. Runtime Traces:** Dependency maps reflect static source code imports; integrating OpenTelemetry distributed trace spans will enable weighting edges by real-time production RPC traffic volume.
 
 ---
 

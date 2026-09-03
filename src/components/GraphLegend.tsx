@@ -1,11 +1,15 @@
 import React from 'react';
 
-export const GraphLegend: React.FC = () => {
+interface GraphLegendProps {
+  nodeCount?: number;
+}
+
+export const GraphLegend: React.FC<GraphLegendProps> = ({ nodeCount = 18 }) => {
   return (
     <div className="absolute bottom-4 left-4 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-xl p-3 shadow-xl max-w-xs text-xs space-y-2 pointer-events-auto">
       <div className="flex items-center justify-between text-slate-400 border-b border-slate-800/80 pb-1.5 font-semibold text-[11px]">
         <span>Risk & Topology Legend</span>
-        <span className="text-[10px] text-indigo-400 font-mono">18 NODES</span>
+        <span className="text-[10px] text-indigo-400 font-mono">{nodeCount} NODES</span>
       </div>
 
       {/* Risk Color Scale */}
