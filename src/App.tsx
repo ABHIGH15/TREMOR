@@ -19,6 +19,32 @@ export default function App() {
   const [impactedNodeIds, setImpactedNodeIds] = useState<string[]>([]);
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [counterfactualReplay, setCounterfactualReplay] = useState<{
+    incidentId: string;
+    description: string;
+    nodes: string[];
+  } | null>(null);
+
+  // Counterfactual Replay Listener: triggered on human sign-off
+  useEffect(() => {
+    return webMCPRegistry.onFlagConfirmed((flag) => {
+      const inc = dataset.incidents.find(i => i.module === flag.module) || dataset.incidents[0];
+      const avertedNodes = ['auth-service', 'redis-session-cluster', 'checkout-service', 'api-gateway'];
+
+      setCounterfactualReplay({
+        incidentId: inc?.id || 'i1',
+        description: inc?.description || 'Redis cache stampede cascade averted by human confirmation',
+        nodes: avertedNodes,
+      });
+      setImpactedNodeIds(avertedNodes);
+
+      const timer = setTimeout(() => {
+        setCounterfactualReplay(null);
+        setImpactedNodeIds([]);
+      }, 5000);
+      return () => clearTimeout(timer);
+    });
+  }, []);
 
   // Hero node selection helper
   const handleSelectHeroNode = useCallback(() => {
@@ -117,6 +143,21 @@ export default function App() {
               simulation={simulation}
               onClear={handleClearHighlights}
             />
+          )}
+
+          {/* Floating Counterfactual Replay Banner */}
+          {counterfactualReplay && !simulation && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-purple-950/90 border border-purple-500/60 rounded-xl px-5 py-2.5 shadow-2xl backdrop-blur-md flex items-center gap-3 text-sm animate-pulse max-w-xl text-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping shrink-0" />
+              <div className="flex flex-col sm:flex-row items-baseline gap-1.5 text-left">
+                <span className="text-purple-300 font-semibold tracking-wide uppercase text-xs shrink-0">
+                  ⏪ Counterfactual Replay
+                </span>
+                <span className="text-purple-100 text-xs">
+                  Simulating averted cascade: {counterfactualReplay.description.substring(0, 80)}...
+                </span>
+              </div>
+            </div>
           )}
 
           <GraphCanvas

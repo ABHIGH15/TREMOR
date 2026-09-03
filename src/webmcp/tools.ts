@@ -259,6 +259,19 @@ export async function registerCoreTools(dataset: SystemDataset, callbacks: ToolC
 
       const result = {
         target_module: module,
+        total_commits_inspected: filteredCommits.length,
+        ai_authored_count: aiCommits.length,
+        human_authored_count: humanCommits.length,
+        ai_authorship_ratio: `${Math.round((aiCommits.length / (filteredCommits.length || 1)) * 100)}%`,
+        commits: filteredCommits.map(c => ({
+          id: c.id,
+          module: c.module,
+          author_type: c.author_type,
+          author: c.author_type === 'ai' ? c.agent_name : c.author_name,
+          date: c.date,
+          message: c.message,
+          risk_impact: c.risk_impact || 'medium',
+        })),
         live_repository_telemetry: {
           repository: 'https://github.com/ABHIGH15/TREMOR',
           status: liveRepoCommits.length > 0 ? 'CONNECTED_LIVE' : 'CACHED_FALLBACK',

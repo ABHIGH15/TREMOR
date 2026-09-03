@@ -3,7 +3,7 @@ import { mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TARGET_URL = 'https://tremor-cockpit.vercel.app';
+const TARGET_URL = process.env.TEST_URL || process.argv[2] || 'https://tremor-cockpit.vercel.app';
 const OUT_DIR = resolve('./verification/regression-suite');
 
 if (!existsSync(OUT_DIR)) {

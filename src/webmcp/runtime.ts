@@ -40,6 +40,7 @@ export interface WebMCPActivityLogItem {
 type ActivityLogListener = (logItem: WebMCPActivityLogItem) => void;
 type ToolRegisteredListener = (tools: WebMCPToolDefinition[]) => void;
 type FlagsChangedListener = (flags: PendingReviewFlag[]) => void;
+type FlagConfirmedListener = (flag: PendingReviewFlag) => void;
 
 class WebMCPRuntimeManager {
   private registeredTools: Map<string, WebMCPToolDefinition> = new Map();
@@ -47,6 +48,9 @@ class WebMCPRuntimeManager {
   private toolListeners: Set<ToolRegisteredListener> = new Set();
   private pendingFlags: Map<string, PendingReviewFlag> = new Map();
   private flagListeners: Set<FlagsChangedListener> = new Set();
+  private flagConfirmedListeners: Set<FlagConfirmedListener> = new Set();
+  private savedSimulateTool: WebMCPToolDefinition | null = null;
+  private toolAbortControllers: Map<string, AbortController> = new Map();
 
   constructor() {
     this.init();
@@ -77,6 +81,12 @@ class WebMCPRuntimeManager {
 
   public async registerTool(tool: WebMCPToolDefinition): Promise<void> {
     this.registeredTools.set(tool.name, tool);
+    if (tool.name === 'simulate_change_impact') {
+      this.savedSimulateTool = tool;
+    }
+
+    const abortController = new AbortController();
+    this.toolAbortControllers.set(tool.name, abortController);
 
     const toolPayload = {
       name: tool.name,
@@ -87,11 +97,11 @@ class WebMCPRuntimeManager {
       },
     };
 
-    // 1. Register on document.modelContext (Canonical W3C / @mcp-b/global standard)
+    // 1. Register on document.modelContext (Canonical W3C / @mcp-b/global standard with AbortSignal)
     try {
       const doc = typeof document !== 'undefined' ? (document as any) : null;
       if (doc?.modelContext?.registerTool && typeof doc.modelContext.registerTool === 'function') {
-        await doc.modelContext.registerTool(toolPayload);
+        await doc.modelContext.registerTool(toolPayload, { signal: abortController.signal });
         console.log(`🛠️ [WebMCP Standard] Registered '${tool.name}' on document.modelContext`);
       }
     } catch (err) {
@@ -107,7 +117,7 @@ class WebMCPRuntimeManager {
         typeof nav.modelContext.registerTool === 'function' &&
         nav.modelContext !== doc?.modelContext
       ) {
-        await nav.modelContext.registerTool(toolPayload);
+        await nav.modelContext.registerTool(toolPayload, { signal: abortController.signal });
         console.log(`🛠️ [WebMCP Standard] Registered '${tool.name}' on navigator.modelContext`);
       }
     } catch (err) {
@@ -119,6 +129,13 @@ class WebMCPRuntimeManager {
 
   public async unregisterTool(name: string): Promise<void> {
     this.registeredTools.delete(name);
+
+    // Standard W3C WebMCP: abort signal unregisters tool from modelContext
+    const controller = this.toolAbortControllers.get(name);
+    if (controller) {
+      controller.abort();
+      this.toolAbortControllers.delete(name);
+    }
 
     try {
       const doc = typeof document !== 'undefined' ? (document as any) : null;
@@ -158,7 +175,8 @@ class WebMCPRuntimeManager {
     content: Array<{ type: 'text'; text: string }>;
     isError?: boolean;
   }> {
-    const tool = this.registeredTools.get(name);
+    const isUnregisteredFromAgent = !this.registeredTools.has(name);
+    const tool = this.registeredTools.get(name) || (name === 'simulate_change_impact' ? this.savedSimulateTool : undefined);
     const startTime = performance.now();
     const now = new Date();
     const timestamp = now.toTimeString().split(' ')[0];
@@ -185,13 +203,17 @@ class WebMCPRuntimeManager {
     }
 
     try {
-      console.log(`⚡ [WebMCP Execution] Agent invoked ${name} with:`, input);
+      console.log(`⚡ [WebMCP Execution] ${isUnregisteredFromAgent ? 'Human Override' : 'Agent'} invoked ${name} with:`, input);
       const result = await tool.execute(input);
       const durationMs = Math.round(performance.now() - startTime);
 
-      const preview = result.content?.[0]?.text
+      let preview = result.content?.[0]?.text
         ? result.content[0].text.substring(0, 120) + (result.content[0].text.length > 120 ? '...' : '')
         : 'Executed successfully';
+
+      if (isUnregisteredFromAgent) {
+        preview = `[Human Cockpit Override] ${preview}`;
+      }
 
       this.notifyActivity({
         id: Math.random().toString(36).substring(2, 9),
@@ -229,6 +251,23 @@ class WebMCPRuntimeManager {
   public addPendingFlag(flag: PendingReviewFlag): void {
     this.pendingFlags.set(flag.id, flag);
     this.notifyFlagListeners();
+
+    // Tool Lifecycle: dynamically unregister simulate_change_impact while pending human review exists
+    if (this.registeredTools.has('simulate_change_impact')) {
+      const toolToSave = this.registeredTools.get('simulate_change_impact');
+      if (toolToSave) this.savedSimulateTool = toolToSave;
+      this.unregisterTool('simulate_change_impact');
+
+      this.notifyActivity({
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp: new Date().toTimeString().split(' ')[0],
+        toolName: 'TOOL_LIFECYCLE',
+        input: { tool: 'simulate_change_impact', action: 'UNREGISTER' },
+        outputPreview: `🔒 Locked: 'simulate_change_impact' unregistered while pending human review is unresolved`,
+        durationMs: 0,
+        status: 'human_action',
+      });
+    }
   }
 
   public confirmFlagByHuman(flagId: string, reviewer = 'Human Reviewer (Devin Patel)'): boolean {
@@ -254,6 +293,24 @@ class WebMCPRuntimeManager {
       durationMs: 0,
       status: 'human_action',
     });
+
+    // Tool Lifecycle: re-register simulate_change_impact if all pending flags are resolved
+    const remainingPending = Array.from(this.pendingFlags.values()).filter(f => f.status === 'PENDING');
+    if (remainingPending.length === 0 && this.savedSimulateTool && !this.registeredTools.has('simulate_change_impact')) {
+      this.registerTool(this.savedSimulateTool);
+      this.notifyActivity({
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp,
+        toolName: 'TOOL_LIFECYCLE',
+        input: { tool: 'simulate_change_impact', action: 'RE_REGISTER' },
+        outputPreview: `🔓 Unlocked: 'simulate_change_impact' re-registered after human review resolution`,
+        durationMs: 0,
+        status: 'human_action',
+      });
+    }
+
+    // Trigger counterfactual replay listeners
+    this.flagConfirmedListeners.forEach(fn => fn(flag));
 
     return true;
   }
@@ -282,11 +339,31 @@ class WebMCPRuntimeManager {
       status: 'human_action',
     });
 
+    // Tool Lifecycle: re-register simulate_change_impact if all pending flags are resolved
+    const remainingPending = Array.from(this.pendingFlags.values()).filter(f => f.status === 'PENDING');
+    if (remainingPending.length === 0 && this.savedSimulateTool && !this.registeredTools.has('simulate_change_impact')) {
+      this.registerTool(this.savedSimulateTool);
+      this.notifyActivity({
+        id: Math.random().toString(36).substring(2, 9),
+        timestamp,
+        toolName: 'TOOL_LIFECYCLE',
+        input: { tool: 'simulate_change_impact', action: 'RE_REGISTER' },
+        outputPreview: `🔓 Unlocked: 'simulate_change_impact' re-registered after human review resolution`,
+        durationMs: 0,
+        status: 'human_action',
+      });
+    }
+
     return true;
   }
 
   public getPendingFlags(): PendingReviewFlag[] {
     return Array.from(this.pendingFlags.values());
+  }
+
+  public onFlagConfirmed(listener: FlagConfirmedListener): () => void {
+    this.flagConfirmedListeners.add(listener);
+    return () => this.flagConfirmedListeners.delete(listener);
   }
 
   public onActivity(listener: ActivityLogListener): () => void {
