@@ -171,6 +171,14 @@ node scripts/regression-suite.mjs
 
 ---
 
+## Known Limitations & What's Next
+
+TREMOR ships today with a curated, high-fidelity microservice topology and historical regression dataset representing an enterprise platform, alongside live GitHub commit telemetry for change provenance.
+
+To keep this initial release focused squarely on the WebMCP interaction model and in-browser human confirmation loop, full repository AST extraction was intentionally scoped out of the client. The immediate next step is integrating Tree-sitter-based static analysis and OpenTelemetry distributed trace ingestion, allowing TREMOR to dynamically map arbitrary codebases and production services in real time.
+
+---
+
 ## License
 
 [MIT License](./LICENSE) — Free and open source.

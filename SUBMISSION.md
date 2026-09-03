@@ -14,6 +14,8 @@
 ## 🏆 Key Submission Criteria: The Core Questions
 
 ### 1. Why WebMCP fits this use case (and why backend MCP cannot solve this)
+In 2026, engineering teams are formally tracking **"AI-Specific Change Failure Rate" (AI-CFR)**. While autonomous coding agents generate diffs 4x faster, unverified multi-module ripple effects cause severe cascading outages. 
+
 Today, multiple backend MCP servers exist to analyze codebase dependencies (e.g. `code-impact-mcp`, `code-review-graph`, `Port.io`, `codebase-memory-mcp`). However, every single one of them suffers from the same fundamental limitation: **they run silently inside a terminal CLI, outputting raw text back to an LLM.** 
 
 To a human engineer overseeing an agent, terminal text provides zero real-time situational awareness and no visual verification.
@@ -22,6 +24,7 @@ To a human engineer overseeing an agent, terminal text provides zero real-time s
 - **Zero-Install, In-Browser Runtime:** Tools are registered directly onto `document.modelContext` via the `@mcp-b/global` standard polyfill. No local socket setup, background daemons, or complex configuration.
 - **Bi-Directional Feedback Loop:** When an agent queries `simulate_change_impact`, the browser's 2D canvas dynamically illuminates the blast zone at 60fps. Both the human and the AI agent look at the exact same live visual impact graph in the same tab.
 - **Enforceable Browser Gates:** Because WebMCP runs in the user's browser, high-risk actions can be locked behind real UI event handlers that the agent cannot programmatically bypass.
+- **Ecosystem Extensibility:** Platforms like **Vercel** or **Netlify** could expose their own deploy-preview dependency graphs and monorepo build pipelines through a WebMCP tool built exactly this way, catching systemic breaks before code even reaches staging.
 
 > *"Backend MCP tools already hand agents blast-radius data as text in a terminal. TREMOR is browser-native — a human and their agent look at the same live impact graph in the same tab, and nothing risky ships without a human clicking Confirm."*
 
@@ -41,6 +44,9 @@ TREMOR redefines this experience:
 
 ### 3. What is newly possible together
 Before WebMCP, autonomous coding agents suffered from **"Architectural Myopia"**: an LLM editing a single file (like `auth-service/session.ts`) reads 200 lines of isolated code, completely blind to the 20 downstream microservices that depend on that token schema. A 2-line cache TTL refactor passes local unit tests, but under peak traffic causes a Redis cache stampede that knocks out the checkout pipeline.
+
+**TREMOR intervenes at the exact adopter moment:**
+> **Used at the exact moment Claude Code, Cursor, or Codex proposes a diff spanning shared modules — before the PR opens, not after CI fails.**
 
 **Together with WebMCP, TREMOR makes newly possible:**
 1. **Pre-Execution Multi-Service Simulation:** AI agents simulate transitive blast radius, flaky test vulnerabilities, and historical outage precedents *before* writing or merging code.

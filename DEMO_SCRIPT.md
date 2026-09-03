@@ -22,7 +22,7 @@
 > "Autonomous AI coding agents like Claude Code, Cursor, and ChatGPT are writing more production code than ever before. But they operate with a dangerous blind spot: **Architectural Myopia**.  
 > When an AI agent refactors a single backend service—say, changing a token session timeout in an auth service—it only sees that isolated file. It has no idea that seven downstream microservices rely on that token format. At scale, that innocent two-line change triggers a Redis cache stampede and crashes the checkout pipeline.  
 > Today, existing backend MCP tools hand agents blast-radius data as raw text in a terminal. But terminal text is invisible to humans and creates zero shared understanding.  
-> This is why we built **TREMOR**."
+> TREMOR intervenes at the exact moment an agent proposes a diff spanning shared modules — before the PR opens, not after CI fails."
 
 ---
 
