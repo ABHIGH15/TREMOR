@@ -56,7 +56,7 @@ Before WebMCP, autonomous coding agents suffered from **"Architectural Myopia"**
 ---
 
 ### 4. How it was implemented & Architectural Depth
-- **WebMCP Standard Polyfill:** Built on official `@mcp-b/global@5.1.0` (authored by WebMCP Challenge Judge Alex Nahas).
+- **WebMCP Standard Polyfill:** Built on official `@mcp-b/global@5.1.0` (authored by Alex Nahas, W3C WebMCP contributor).
 - **The 6-Tool WebMCP Architecture Suite:**
   1. `get_system_snapshot`: Returns full topology (18 nodes, 28 edges), top risk bottlenecks (`auth-service 0.88`, `jwt-security-core 0.82`, `checkout-service 0.75`), incident index, and test suite health summary.
   2. `get_blast_radius`: Multi-root transitive BFS traversal mapping downstream callers and flaky tests.
